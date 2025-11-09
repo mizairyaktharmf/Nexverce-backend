@@ -1,0 +1,22 @@
+import mongoose from "mongoose";
+
+const productSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String },
+    price: { type: String },
+    tag: { type: String },
+    category: { type: String },
+    image: { type: String },
+    type: { type: String },
+    endTime: { type: String },
+    slug: { type: String },
+    content: { type: String },
+    referralLink: { type: String },
+    status: { type: String },
+  },
+  { timestamps: true }
+);
+
+const Product = mongoose.model("Product", productSchema);
+export default Product;
