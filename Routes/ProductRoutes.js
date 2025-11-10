@@ -34,17 +34,34 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ✅ 4. Update product
+// ✅ 4. Update product (Full Update)
 router.put("/:id", async (req, res) => {
   try {
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Error updating product", error });
   }
 });
 
-// ✅ 5. Delete product
+// ✅ 5. PATCH product (Partial Update — status, schedule, etc.)
+router.patch("/:id", async (req, res) => {
+  try {
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Product not found" });
+    res.status(200).json(updated);
+  } catch (error) {
+    res.status(400).json({ message: "Error patching product", error });
+  }
+});
+
+// ✅ 6. Delete product
 router.delete("/:id", async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);
