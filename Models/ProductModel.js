@@ -9,11 +9,12 @@ const productSchema = new mongoose.Schema(
     category: { type: String },
     image: { type: String },
     type: { type: String },
-    endTime: { type: String },
     slug: { type: String },
     content: { type: String },
     referralLink: { type: String },
-    status: { type: String },
+    status: { type: String, default: "draft" },
+    endTime: { type: String },
+    scheduledAt: { type: Date }, 
   },
   { timestamps: true }
 );
