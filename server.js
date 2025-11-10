@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./Config/MangoDb.js";
+import productRoutes from "./Routes/productRoutes.js";  // ✅ add this line
 
 dotenv.config();
 connectDB();
@@ -9,6 +10,9 @@ connectDB();
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// ✅ Product API route
+app.use("/api/products", productRoutes);
 
 app.get("/", (req, res) => {
   res.send("✅ Nexverce backend running and connected to MongoDB");
