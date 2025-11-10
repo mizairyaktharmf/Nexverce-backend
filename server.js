@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./Config/MangoDb.js";
-import productRoutes from "./Routes/productRoutes.js";  // ✅ add this line
+import productRoutes from "./Routes/ProductRoutes.js";  
 
 dotenv.config();
 connectDB();
