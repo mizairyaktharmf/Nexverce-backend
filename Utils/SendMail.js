@@ -3,30 +3,32 @@ import nodemailer from "nodemailer";
 export const sendMail = async (email, code) => {
   try {
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true, // true for 465, false for other ports
       auth: {
-        user: process.env.EMAIL_USER, // add in .env
-        pass: process.env.EMAIL_PASS  // add in .env
-      }
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
     });
 
     const message = {
       from: `"Nexverce Verification" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Verify your Nexverce account",
+      subject: "Verify your Nexverce Account",
       html: `
-        <div style="font-family:Arial,sans-serif;padding:20px;">
-          <h2>Welcome to Nexverce 🚀</h2>
-          <p>Use the following verification code to activate your account:</p>
-          <h3 style="color:#3b82f6;letter-spacing:3px;">${code}</h3>
-          <p>This code expires in 10 minutes.</p>
+        <div style="font-family:Arial,sans-serif;padding:20px;background:#f9fafb;border-radius:10px;">
+          <h2 style="color:#111827;">Welcome to <span style="color:#3b82f6;">Nexverce</span> 🚀</h2>
+          <p style="font-size:15px;color:#334155;">Use the verification code below to activate your account:</p>
+          <h1 style="color:#3b82f6;text-align:center;letter-spacing:5px;">${code}</h1>
+          <p style="font-size:13px;color:#64748b;">This code will expire in <strong>10 minutes</strong>.</p>
         </div>
-      `
+      `,
     };
 
     await transporter.sendMail(message);
-    console.log(`📧 Verification email sent to ${email}`);
+    console.log(`📧 Verification email sent successfully to ${email}`);
   } catch (err) {
-    console.error("❌ Email sending failed:", err.message);
+    console.error("❌ Email sending failed:", err);
   }
 };
