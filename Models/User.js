@@ -8,7 +8,10 @@ const userSchema = new mongoose.Schema(
     lastName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
-    role: { type: String, enum: roles, default: "admin" }
+    role: { type: String, enum: roles, default: "admin" },
+    verified: { type: Boolean, default: false },
+    verificationCode: { type: String },
+
   },
   { timestamps: true }
 );
