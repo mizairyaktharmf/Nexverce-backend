@@ -5,6 +5,10 @@ const productSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String },
     price: { type: String },
+
+    // ⭐ IMPORTANT — ADD THIS
+    currency: { type: String, default: "USD" },
+
     tag: { type: String },
     category: { type: String },
     image: { type: String },
@@ -12,9 +16,10 @@ const productSchema = new mongoose.Schema(
     slug: { type: String },
     content: { type: String },
     referralLink: { type: String },
+
     status: { type: String, default: "draft" },
     endTime: { type: String },
-    scheduledAt: { type: Date }, 
+    scheduledAt: { type: Date },
   },
   { timestamps: true }
 );
