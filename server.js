@@ -1,3 +1,5 @@
+
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -7,6 +9,9 @@ import authRoutes from "./Routes/AuthRoutes.js";
 
 dotenv.config();
 connectDB();
+
+console.log("RESEND KEY:", process.env.RESEND_API_KEY);
+
 
 const app = express();
 
