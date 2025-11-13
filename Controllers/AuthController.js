@@ -3,55 +3,55 @@ import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import { sendMail } from "../Utils/SendMail.js";
 
-// Password rules: 8 chars, 1 uppercase, 1 number, 1 special char
+// Password validation: 8 chars, 1 uppercase, 1 number, 1 special char
 const PASS_REGEX =
   /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
-/* -------------------------------------------------------
+/* =========================================================
    📌 SIGNUP CONTROLLER
--------------------------------------------------------- */
+========================================================= */
 export const signup = async (req, res) => {
   try {
-    console.log("📥 Incoming signup request:", req.body);
+    console.log("📥 Signup Request:", req.body);
 
     const { firstName, lastName, email, password, confirmPassword, role } = req.body;
 
-    // 1. Validate fields
+    // Validate inputs
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // 2. Password match
+    // Validate passwords match
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    // 3. Password strength
+    // Validate password strength
     if (!PASS_REGEX.test(password)) {
       return res.status(400).json({
         message:
-          "Password must be 8+ chars with 1 uppercase, 1 number, and 1 special character",
+          "Password must be 8+ characters with 1 uppercase, 1 number and 1 special character.",
       });
     }
 
-    // 4. Check if email already exists
-    const exists = await User.findOne({ email });
-    if (exists) {
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
       return res.status(400).json({ message: "Email already in use" });
     }
 
-    // 5. Hash password
-    const hashed = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 6. Generate 6-digit verification code
+    // Generate 6-digit verification code
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // 7. Create user
+    // Create new user
     const newUser = new User({
       firstName,
       lastName,
       email,
-      password: hashed,
+      password: hashedPassword,
       role: role || "admin",
       verified: false,
       verificationCode,
@@ -59,39 +59,38 @@ export const signup = async (req, res) => {
 
     await newUser.save();
 
-    // 8. Send verification email
+    // Send verification email
     try {
       await sendMail(email, verificationCode);
       console.log("📧 Verification email sent to:", email);
     } catch (emailErr) {
-      console.error("❌ Email sending failed:", emailErr);
+      console.error("❌ Failed to send verification email:", emailErr);
       return res.status(500).json({
-        message: "Signup successful but email could not be sent. Try again later.",
+        message: "Signup succeeded, but email could not be sent. Try again later.",
       });
     }
 
-    // 9. Success response
     return res.status(201).json({
-      message: "Signup successful! Check your email for the verification code.",
+      message: "Signup successful! Please check your email for the verification code.",
     });
 
-  } catch (err) {
-    console.error("❌ Signup error:", err);
+  } catch (error) {
+    console.error("❌ Signup Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
-/* -------------------------------------------------------
+/* =========================================================
    📌 VERIFY EMAIL CONTROLLER
--------------------------------------------------------- */
+========================================================= */
 export const verifyEmail = async (req, res) => {
   try {
-    console.log("📥 Incoming verify request:", req.body);
+    console.log("📥 Verify Email Request:", req.body);
 
     const { email, code } = req.body;
 
     if (!email || !code) {
-      return res.status(400).json({ message: "Email and code are required" });
+      return res.status(400).json({ message: "Email and verification code are required" });
     }
 
     const user = await User.findOne({ email });
@@ -105,25 +104,26 @@ export const verifyEmail = async (req, res) => {
       return res.status(400).json({ message: "Invalid verification code" });
     }
 
-    // Mark verified
+    // Update verification status
     user.verified = true;
     user.verificationCode = null;
+
     await user.save();
 
-    return res.json({ message: "Email verified successfully! You can now login." });
+    return res.json({ message: "Email verified successfully. You can now log in." });
 
-  } catch (err) {
-    console.error("❌ Verify error:", err);
+  } catch (error) {
+    console.error("❌ Email Verification Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
-/* -------------------------------------------------------
+/* =========================================================
    📌 LOGIN CONTROLLER
--------------------------------------------------------- */
+========================================================= */
 export const login = async (req, res) => {
   try {
-    console.log("📥 Incoming login request:", req.body.email);
+    console.log("📥 Login Request:", req.body.email);
 
     const { email, password } = req.body;
 
@@ -142,8 +142,8 @@ export const login = async (req, res) => {
     }
 
     // Compare password
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid)
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword)
       return res.status(400).json({ message: "Invalid credentials" });
 
     // Generate JWT
@@ -153,6 +153,7 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // Return authenticated user with new fields
     return res.json({
       token,
       user: {
@@ -161,11 +162,16 @@ export const login = async (req, res) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+
+        // NEW PROFILE FIELDS
+        profileImage: user.profileImage,
+        mobile: user.mobile,
+        bio: user.bio,
       },
     });
 
-  } catch (err) {
-    console.error("❌ Login error:", err);
+  } catch (error) {
+    console.error("❌ Login Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
