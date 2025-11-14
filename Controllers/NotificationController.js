@@ -1,4 +1,4 @@
-import Notification from "../models/Notification.js";
+import Notification from "../Models/Notification.js";
 
 export const createNotification = async (message, type, user="admin") => {
   await Notification.create({ message, type, user });
