@@ -2,16 +2,20 @@
 import express from "express";
 import {
   getNotifications,
+  createNotificationAPI,
   markAsRead,
-  markAllRead
+  markAllRead,
 } from "../Controllers/NotificationController.js";
 
 const router = express.Router();
 
-// GET all notifications
+// Create notification (frontend or system call)
+router.post("/", createNotificationAPI);
+
+// Get all notifications
 router.get("/", getNotifications);
 
-// Mark one as read
+// Mark single as read
 router.patch("/read/:id", markAsRead);
 
 // Mark all as read
