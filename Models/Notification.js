@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["published", "draft", "scheduled", "update", "delete", "info"],
+      enum: ["published", "draft", "scheduled", "update", "delete", "status", "info"],
       default: "info",
     },
 
@@ -15,7 +15,7 @@ const notificationSchema = new mongoose.Schema(
 
     user: {
       type: String,
-      default: "admin", // optional
+      default: "admin",
     },
   },
   { timestamps: true }
