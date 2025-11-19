@@ -1,9 +1,12 @@
 import express from "express";
 import Product from "../Models/ProductModel.js";
+import { createNotification } from "../Controllers/NotificationController.js";
 
 const router = express.Router();
 
-// ✅ 1. Get all products
+/* ======================================================
+   GET ALL PRODUCTS
+====================================================== */
 router.get("/", async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -13,40 +16,95 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ✅ 2. Get single product
+/* ======================================================
+   GET ONE PRODUCT BY ID
+====================================================== */
 router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: "Product not found" });
+    if (!product) return res.status(404).json({ message: "Not found" });
     res.status(200).json(product);
   } catch (error) {
     res.status(500).json({ message: "Error fetching product", error });
   }
 });
 
-// ✅ 3. Add a new product
+/* ======================================================
+   CREATE NEW PRODUCT — SUPPORT BLOCKS + HTML
+====================================================== */
 router.post("/", async (req, res) => {
   try {
-    const newProduct = await Product.create(req.body);
+    let { contentBlocks, content, ...rest } = req.body;
+
+    // 🔥 Parse blocks if received as a STRING
+    if (typeof contentBlocks === "string") {
+      try {
+        contentBlocks = JSON.parse(contentBlocks);
+      } catch {
+        contentBlocks = [];
+      }
+    }
+
+    // Ensure blocks exist
+    if (!Array.isArray(contentBlocks)) contentBlocks = [];
+
+    const newProduct = await Product.create({
+      ...rest,
+      content,
+      contentBlocks,
+    });
+
+    // Create admin notification
+    await createNotification(
+      `New post created: ${newProduct.title}`,
+      "published"
+    );
+
     res.status(201).json(newProduct);
   } catch (error) {
     res.status(400).json({ message: "Error creating product", error });
   }
 });
 
-// ✅ 4. Update product (Full Update)
+/* ======================================================
+   FULL UPDATE (PUT) — SUPPORT BLOCKS
+====================================================== */
 router.put("/:id", async (req, res) => {
   try {
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    let { contentBlocks, content, ...rest } = req.body;
+
+    // Parse blocks if needed
+    if (typeof contentBlocks === "string") {
+      try {
+        contentBlocks = JSON.parse(contentBlocks);
+      } catch {
+        contentBlocks = [];
+      }
+    }
+
+    if (!Array.isArray(contentBlocks)) contentBlocks = [];
+
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...rest,
+        content,
+        contentBlocks,
+      },
+      { new: true }
+    );
+
+    await createNotification(`Post updated: ${updated.title}`, "update");
+
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Error updating product", error });
   }
 });
 
-// ✅ 5. PATCH product (Partial Update — status, schedule, etc.)
+/* ======================================================
+   PATCH — STATUS, SCHEDULE
+====================================================== */
 router.patch("/:id", async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(
@@ -54,20 +112,30 @@ router.patch("/:id", async (req, res) => {
       { $set: req.body },
       { new: true }
     );
-    if (!updated) return res.status(404).json({ message: "Product not found" });
+
+    await createNotification(
+      `Post status changed: ${updated.title}`,
+      updated.status
+    );
+
     res.status(200).json(updated);
   } catch (error) {
     res.status(400).json({ message: "Error patching product", error });
   }
 });
 
-// ✅ 6. Delete product
+/* ======================================================
+   DELETE PRODUCT
+====================================================== */
 router.delete("/:id", async (req, res) => {
   try {
-    await Product.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Product deleted successfully" });
+    const deleted = await Product.findByIdAndDelete(req.params.id);
+
+    await createNotification(`Post deleted: ${deleted?.title}`, "delete");
+
+    res.status(200).json({ message: "Deleted" });
   } catch (error) {
-    res.status(400).json({ message: "Error deleting product", error });
+    res.status(400).json({ message: "Error deleting", error });
   }
 });
 

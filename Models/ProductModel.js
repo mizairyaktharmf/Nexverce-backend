@@ -6,7 +6,6 @@ const productSchema = new mongoose.Schema(
     description: { type: String },
     price: { type: String },
 
-    // ⭐ IMPORTANT — ADD THIS
     currency: { type: String, default: "USD" },
 
     tag: { type: String },
@@ -14,7 +13,16 @@ const productSchema = new mongoose.Schema(
     image: { type: String },
     type: { type: String },
     slug: { type: String },
+
+    // OLD CONTENT (HTML)
     content: { type: String },
+
+    // ⭐ NEW FIELD FOR BLOCK SYSTEM
+    contentBlocks: {
+      type: Array,
+      default: [],
+    },
+
     referralLink: { type: String },
 
     status: { type: String, default: "draft" },
