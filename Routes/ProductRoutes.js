@@ -1,11 +1,12 @@
 import express from "express";
 import Product from "../Models/ProductModel.js";
 import { createNotification } from "../Controllers/NotificationController.js";
+import { verifyToken } from "../Middleware/AuthMiddleware.js";
 
 const router = express.Router();
 
 /* ======================================================
-   GET ALL PRODUCTS
+   GET ALL PRODUCTS  (PUBLIC)
 ====================================================== */
 router.get("/", async (req, res) => {
   try {
@@ -17,7 +18,7 @@ router.get("/", async (req, res) => {
 });
 
 /* ======================================================
-   GET ONE PRODUCT BY ID
+   GET ONE PRODUCT  (PUBLIC)
 ====================================================== */
 router.get("/:id", async (req, res) => {
   try {
@@ -30,13 +31,12 @@ router.get("/:id", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE NEW PRODUCT — SUPPORT BLOCKS + HTML
+   CREATE NEW PRODUCT  (PROTECTED)
 ====================================================== */
-router.post("/", async (req, res) => {
+router.post("/", verifyToken, async (req, res) => {
   try {
     let { contentBlocks, content, ...rest } = req.body;
 
-    // 🔥 Parse blocks if received as a STRING
     if (typeof contentBlocks === "string") {
       try {
         contentBlocks = JSON.parse(contentBlocks);
@@ -44,8 +44,6 @@ router.post("/", async (req, res) => {
         contentBlocks = [];
       }
     }
-
-    // Ensure blocks exist
     if (!Array.isArray(contentBlocks)) contentBlocks = [];
 
     const newProduct = await Product.create({
@@ -54,10 +52,13 @@ router.post("/", async (req, res) => {
       contentBlocks,
     });
 
-    // Create admin notification
+    // PERFORMED BY
+    const performedBy = `${req.user.firstName} ${req.user.lastName} (${req.user.role})`;
+
     await createNotification(
       `New post created: ${newProduct.title}`,
-      "published"
+      "published",
+      performedBy
     );
 
     res.status(201).json(newProduct);
@@ -67,13 +68,12 @@ router.post("/", async (req, res) => {
 });
 
 /* ======================================================
-   FULL UPDATE (PUT) — SUPPORT BLOCKS
+   FULL UPDATE (PUT) (PROTECTED)
 ====================================================== */
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   try {
     let { contentBlocks, content, ...rest } = req.body;
 
-    // Parse blocks if needed
     if (typeof contentBlocks === "string") {
       try {
         contentBlocks = JSON.parse(contentBlocks);
@@ -81,7 +81,6 @@ router.put("/:id", async (req, res) => {
         contentBlocks = [];
       }
     }
-
     if (!Array.isArray(contentBlocks)) contentBlocks = [];
 
     const updated = await Product.findByIdAndUpdate(
@@ -94,7 +93,13 @@ router.put("/:id", async (req, res) => {
       { new: true }
     );
 
-    await createNotification(`Post updated: ${updated.title}`, "update");
+    const performedBy = `${req.user.firstName} ${req.user.lastName} (${req.user.role})`;
+
+    await createNotification(
+      `Post updated: ${updated.title}`,
+      "update",
+      performedBy
+    );
 
     res.status(200).json(updated);
   } catch (error) {
@@ -103,9 +108,9 @@ router.put("/:id", async (req, res) => {
 });
 
 /* ======================================================
-   PATCH — STATUS, SCHEDULE
+   PATCH — STATUS, SCHEDULE (PROTECTED)
 ====================================================== */
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", verifyToken, async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
@@ -113,9 +118,12 @@ router.patch("/:id", async (req, res) => {
       { new: true }
     );
 
+    const performedBy = `${req.user.firstName} ${req.user.lastName} (${req.user.role})`;
+
     await createNotification(
       `Post status changed: ${updated.title}`,
-      updated.status
+      updated.status,
+      performedBy
     );
 
     res.status(200).json(updated);
@@ -125,13 +133,19 @@ router.patch("/:id", async (req, res) => {
 });
 
 /* ======================================================
-   DELETE PRODUCT
+   DELETE PRODUCT (PROTECTED)
 ====================================================== */
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   try {
     const deleted = await Product.findByIdAndDelete(req.params.id);
 
-    await createNotification(`Post deleted: ${deleted?.title}`, "delete");
+    const performedBy = `${req.user.firstName} ${req.user.lastName} (${req.user.role})`;
+
+    await createNotification(
+      `Post deleted: ${deleted?.title}`,
+      "delete",
+      performedBy
+    );
 
     res.status(200).json({ message: "Deleted" });
   } catch (error) {

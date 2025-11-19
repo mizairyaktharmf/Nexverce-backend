@@ -8,13 +8,23 @@ const PASS_REGEX =
   /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
 /* =========================================================
+   📌 ROLE MAPPER (Your New System)
+========================================================= */
+const mapRole = (role) => {
+  if (role === "owner") return "owner";
+  if (role === "admin") return "admin";
+  return "staff"; // all other titles become staff
+};
+
+/* =========================================================
    📌 SIGNUP CONTROLLER
 ========================================================= */
 export const signup = async (req, res) => {
   try {
     console.log("📥 Signup Request:", req.body);
 
-    const { firstName, lastName, email, password, confirmPassword, role } = req.body;
+    const { firstName, lastName, email, password, confirmPassword, role } =
+      req.body;
 
     // Validate inputs
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
@@ -34,7 +44,7 @@ export const signup = async (req, res) => {
       });
     }
 
-    // Check if email already exists
+    // Check if email exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already in use" });
@@ -44,15 +54,20 @@ export const signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Generate 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
 
-    // Create new user
+    // NEW ROLE SYSTEM APPLIED HERE
+    const finalRole = mapRole(role);
+
+    // Create user
     const newUser = new User({
       firstName,
       lastName,
       email,
       password: hashedPassword,
-      role: role || "admin",
+      role: finalRole,
       verified: false,
       verificationCode,
     });
@@ -66,14 +81,14 @@ export const signup = async (req, res) => {
     } catch (emailErr) {
       console.error("❌ Failed to send verification email:", emailErr);
       return res.status(500).json({
-        message: "Signup succeeded, but email could not be sent. Try again later.",
+        message: "Account created but email failed. Try again later.",
       });
     }
 
     return res.status(201).json({
-      message: "Signup successful! Please check your email for the verification code.",
+      message:
+        "Signup successful! Please check your email for the verification code.",
     });
-
   } catch (error) {
     console.error("❌ Signup Error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -90,7 +105,9 @@ export const verifyEmail = async (req, res) => {
     const { email, code } = req.body;
 
     if (!email || !code) {
-      return res.status(400).json({ message: "Email and verification code are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and verification code are required" });
     }
 
     const user = await User.findOne({ email });
@@ -104,14 +121,14 @@ export const verifyEmail = async (req, res) => {
       return res.status(400).json({ message: "Invalid verification code" });
     }
 
-    // Update verification status
+    // verify
     user.verified = true;
     user.verificationCode = null;
-
     await user.save();
 
-    return res.json({ message: "Email verified successfully. You can now log in." });
-
+    return res.json({
+      message: "Email verified successfully. You can now log in.",
+    });
   } catch (error) {
     console.error("❌ Email Verification Error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -132,11 +149,8 @@ export const login = async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Block unverified accounts
     if (!user.verified) {
       return res.status(403).json({
         message: "Please verify your email before logging in.",
@@ -156,6 +170,7 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // Send response
     return res.json({
       token,
       user: {
@@ -170,7 +185,6 @@ export const login = async (req, res) => {
         bio: user.bio,
       },
     });
-
   } catch (error) {
     console.error("❌ Login Error:", error);
     return res.status(500).json({ message: "Internal server error" });
