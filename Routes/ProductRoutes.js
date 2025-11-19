@@ -4,7 +4,9 @@ import { createNotification } from "../Controllers/NotificationController.js";
 
 const router = express.Router();
 
-// GET ALL
+/* ======================================================
+   GET ALL PRODUCTS
+====================================================== */
 router.get("/", async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -14,7 +16,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET ONE
+/* ======================================================
+   GET ONE PRODUCT BY ID
+====================================================== */
 router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -25,11 +29,32 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// CREATE NEW PRODUCT
+/* ======================================================
+   CREATE NEW PRODUCT — SUPPORT BLOCKS + HTML
+====================================================== */
 router.post("/", async (req, res) => {
   try {
-    const newProduct = await Product.create(req.body);
+    let { contentBlocks, content, ...rest } = req.body;
 
+    // 🔥 Parse blocks if received as a STRING
+    if (typeof contentBlocks === "string") {
+      try {
+        contentBlocks = JSON.parse(contentBlocks);
+      } catch {
+        contentBlocks = [];
+      }
+    }
+
+    // Ensure blocks exist
+    if (!Array.isArray(contentBlocks)) contentBlocks = [];
+
+    const newProduct = await Product.create({
+      ...rest,
+      content,
+      contentBlocks,
+    });
+
+    // Create admin notification
     await createNotification(
       `New post created: ${newProduct.title}`,
       "published"
@@ -41,12 +66,33 @@ router.post("/", async (req, res) => {
   }
 });
 
-// FULL UPDATE
+/* ======================================================
+   FULL UPDATE (PUT) — SUPPORT BLOCKS
+====================================================== */
 router.put("/:id", async (req, res) => {
   try {
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    let { contentBlocks, content, ...rest } = req.body;
+
+    // Parse blocks if needed
+    if (typeof contentBlocks === "string") {
+      try {
+        contentBlocks = JSON.parse(contentBlocks);
+      } catch {
+        contentBlocks = [];
+      }
+    }
+
+    if (!Array.isArray(contentBlocks)) contentBlocks = [];
+
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...rest,
+        content,
+        contentBlocks,
+      },
+      { new: true }
+    );
 
     await createNotification(`Post updated: ${updated.title}`, "update");
 
@@ -56,7 +102,9 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// PATCH (status / schedule / partial updates)
+/* ======================================================
+   PATCH — STATUS, SCHEDULE
+====================================================== */
 router.patch("/:id", async (req, res) => {
   try {
     const updated = await Product.findByIdAndUpdate(
@@ -76,7 +124,9 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// DELETE
+/* ======================================================
+   DELETE PRODUCT
+====================================================== */
 router.delete("/:id", async (req, res) => {
   try {
     const deleted = await Product.findByIdAndDelete(req.params.id);
