@@ -127,12 +127,14 @@ export const login = async (req, res) => {
 
     const { email, password } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
+    }
 
     const user = await User.findOne({ email });
-    if (!user)
+    if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     // Block unverified accounts
     if (!user.verified) {
@@ -143,8 +145,9 @@ export const login = async (req, res) => {
 
     // Compare password
     const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword)
+    if (!isValidPassword) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -153,7 +156,6 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // Return authenticated user with new fields
     return res.json({
       token,
       user: {
@@ -163,7 +165,6 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
 
-        // NEW PROFILE FIELDS
         profileImage: user.profileImage,
         mobile: user.mobile,
         bio: user.bio,

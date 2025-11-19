@@ -31,7 +31,7 @@ router.post("/verify", verifyEmail);
    🔒 Protected Routes
 ---------------------------------------------- */
 
-// Test: Validate token & return user
+// Validate token & return user
 router.get("/me", verifyToken, (req, res) => {
   res.json({ message: "Token valid", user: req.user });
 });
