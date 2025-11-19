@@ -9,7 +9,12 @@ const notificationSchema = new mongoose.Schema(
       default: "info",
     },
     read: { type: Boolean, default: false },
-    user: { type: String, default: "admin" },
+
+    // Store actual user performing action
+    user: {
+      type: String, // e.g. "Faizar (admin)"
+      required: true,
+    },
   },
   { timestamps: true }
 );

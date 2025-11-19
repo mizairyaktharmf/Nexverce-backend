@@ -1,7 +1,7 @@
 import Notification from "../Models/Notification.js";
 
-// CREATE NOTIFICATION (Reusable)
-export const createNotification = async (message, type = "info", user = "admin") => {
+// CREATE NOTIFICATION
+export const createNotification = async (message, type = "info", user) => {
   try {
     await Notification.create({ message, type, user });
   } catch (err) {

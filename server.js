@@ -8,16 +8,15 @@ import connectDB from "./Config/MangoDb.js";
 import productRoutes from "./Routes/ProductRoutes.js";
 import authRoutes from "./Routes/AuthRoutes.js";
 import notificationRoutes from "./Routes/NotificationRoutes.js";
+import userRoutes from "./Routes/UserRoutes.js";   // ⭐ ADDED
 
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
 
-// Debug key (optional)
 console.log("RESEND KEY Loaded:", !!process.env.RESEND_API_KEY);
 
-// Initialize Express app
 const app = express();
 
 // Global Middlewares
@@ -31,6 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/users", userRoutes);  // ⭐ ADDED
 
 /* ===========================================
    DEFAULT HOME ROUTE
@@ -40,7 +40,7 @@ app.get("/", (req, res) => {
 });
 
 /* ===========================================
-   ERROR HANDLER (PROTECTS SERVER)
+   ERROR HANDLER
 =========================================== */
 app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err);
