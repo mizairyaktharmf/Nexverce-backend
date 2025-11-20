@@ -1,31 +1,46 @@
 // Controllers/ProductController.js
-
-import Product from "../Models/ProductModel.js";   // ✅ FIXED IMPORT
+import Product from "../Models/ProductModel.js";
 import { createNotification } from "./NotificationController.js";
 
 /* ----------------------------------------------------
-   CREATE NEW PRODUCT OR BLOG POST
+   FUNCTION: generate unique slug
+---------------------------------------------------- */
+const generateSlug = async (title) => {
+  let base = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  let slug = base;
+  let counter = 1;
+
+  while (await Product.findOne({ slug })) {
+    slug = `${base}-${counter}`;
+    counter++;
+  }
+
+  return slug;
+};
+
+/* ----------------------------------------------------
+   CREATE PRODUCT
 ---------------------------------------------------- */
 export const createPost = async (req, res) => {
   try {
     const data = req.body;
 
-    // Auto-generate slug if missing
-    const finalSlug =
-      data.slug ||
-      data.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+    // generate slug
+    const slug = await generateSlug(data.title);
 
     const newPost = await Product.create({
       ...data,
-      slug: finalSlug,
+      slug,
+      createdBy: req.user._id,
     });
 
     await createNotification({
-      message: `Created new ${newPost.type}`,
-      type: newPost.status === "published" ? "published" : "draft",
+      message: `Created new product`,
+      type: newPost.status,
       performedBy: req.user,
       target: {
         id: newPost._id,
@@ -37,52 +52,63 @@ export const createPost = async (req, res) => {
     res.status(201).json(newPost);
   } catch (error) {
     console.log(error);
-    res.status(500).json({ error: "Failed to create post" });
+    res.status(500).json({ error: "Failed to create product" });
   }
 };
 
 /* ----------------------------------------------------
-   GET ALL POSTS
+   GET ALL PRODUCTS
 ---------------------------------------------------- */
 export const getAllPosts = async (req, res) => {
   try {
     const posts = await Product.find().sort({ createdAt: -1 });
     res.json(posts);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch posts" });
+    res.status(500).json({ error: "Failed to fetch products" });
   }
 };
 
 /* ----------------------------------------------------
-   GET SINGLE POST
+   GET SINGLE PRODUCT
 ---------------------------------------------------- */
 export const getPostById = async (req, res) => {
   try {
     const post = await Product.findById(req.params.id);
-    if (!post) return res.status(404).json({ error: "Post not found" });
+    if (!post) return res.status(404).json({ error: "Product not found" });
 
     res.json(post);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch post" });
+    res.status(500).json({ error: "Failed to fetch product" });
   }
 };
 
 /* ----------------------------------------------------
-   UPDATE POST
+   UPDATE PRODUCT
 ---------------------------------------------------- */
 export const updatePost = async (req, res) => {
   try {
+    const post = await Product.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Product not found" });
+
+    // staff can only edit own posts
+    if (
+      req.user.role === "staff" &&
+      post.createdBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    // assign updatedBy
+    req.body.updatedBy = req.user._id;
+
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
     );
 
-    if (!updated)
-      return res.status(404).json({ error: "Post not found" });
-
     await createNotification({
-      message: `${updated.type} updated`,
+      message: `Product updated`,
       type: "update",
       performedBy: req.user,
       target: {
@@ -94,56 +120,70 @@ export const updatePost = async (req, res) => {
 
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: "Failed to update post" });
+    res.status(500).json({ error: "Failed to update product" });
   }
 };
 
 /* ----------------------------------------------------
-   DELETE POST
+   DELETE PRODUCT
 ---------------------------------------------------- */
 export const deletePost = async (req, res) => {
   try {
-    const deleted = await Product.findByIdAndDelete(req.params.id);
+    const post = await Product.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Not found" });
 
-    if (!deleted)
-      return res.status(404).json({ error: "Post not found" });
+    // staff can only delete own posts
+    if (
+      req.user.role === "staff" &&
+      post.createdBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    await post.deleteOne();
 
     await createNotification({
-      message: `${deleted.type} deleted`,
+      message: `Product deleted`,
       type: "delete",
       performedBy: req.user,
       target: {
-        id: deleted._id,
-        title: deleted.title,
+        id: post._id,
+        title: post.title,
         model: "Product",
       },
     });
 
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: "Failed to delete post" });
+    res.status(500).json({ error: "Failed to delete product" });
   }
 };
 
 /* ----------------------------------------------------
-   TOGGLE STATUS (publish <-> draft)
+   PUBLISH / DRAFT TOGGLE
 ---------------------------------------------------- */
 export const changeStatus = async (req, res) => {
   try {
     const post = await Product.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Not found" });
 
-    if (!post)
-      return res.status(404).json({ error: "Post not found" });
+    // staff can't change status of other users' posts
+    if (
+      req.user.role === "staff" &&
+      post.createdBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
 
-    const newStatus =
+    post.status =
       post.status === "published" ? "draft" : "published";
 
-    post.status = newStatus;
+    post.updatedBy = req.user._id;
     await post.save();
 
     await createNotification({
-      message: `${post.type} marked as ${newStatus}`,
-      type: newStatus,
+      message: `Product marked as ${post.status}`,
+      type: post.status,
       performedBy: req.user,
       target: {
         id: post._id,
@@ -159,37 +199,39 @@ export const changeStatus = async (req, res) => {
 };
 
 /* ----------------------------------------------------
-   SCHEDULE A POST
+   SCHEDULE PRODUCT
 ---------------------------------------------------- */
 export const schedulePost = async (req, res) => {
   try {
-    const { scheduledAt } = req.body;
+    const post = await Product.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Not found" });
 
-    const updated = await Product.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: "scheduled",
-        scheduledAt,
-      },
-      { new: true }
-    );
+    // staff cannot schedule other staff's post
+    if (
+      req.user.role === "staff" &&
+      post.createdBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
 
-    if (!updated)
-      return res.status(404).json({ error: "Post not found" });
+    post.status = "scheduled";
+    post.scheduledAt = req.body.scheduledAt;
+    post.updatedBy = req.user._id;
+    await post.save();
 
     await createNotification({
-      message: `${updated.type} scheduled`,
+      message: `Product scheduled`,
       type: "scheduled",
       performedBy: req.user,
       target: {
-        id: updated._id,
-        title: updated.title,
+        id: post._id,
+        title: post.title,
         model: "Product",
       },
     });
 
-    res.json(updated);
+    res.json(post);
   } catch (err) {
-    res.status(500).json({ error: "Failed to schedule post" });
+    res.status(500).json({ error: "Failed to schedule product" });
   }
 };
