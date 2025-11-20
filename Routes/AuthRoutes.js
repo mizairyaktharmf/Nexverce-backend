@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
   signup,
   login,
@@ -8,7 +9,8 @@ import {
 import {
   updateProfile,
   changePassword,
-} from "../Controllers/ProfileController.js";
+  getUserById,
+} from "../Controllers/UserController.js";
 
 import { verifyToken } from "../Middleware/AuthMiddleware.js";
 
@@ -18,25 +20,28 @@ const router = express.Router();
    🔐 Authentication Routes
 ---------------------------------------------- */
 
-// Signup new user
+// Signup (only @nexverce.com)
 router.post("/signup", signup);
 
 // Login
 router.post("/login", login);
 
-// Verify account using email OTP
+// Verify account (email OTP)
 router.post("/verify", verifyEmail);
 
 /* ---------------------------------------------
    🔒 Protected Routes
 ---------------------------------------------- */
 
-// Validate token & return user
+// Get logged-in user
 router.get("/me", verifyToken, (req, res) => {
-  res.json({ message: "Token valid", user: req.user });
+  return res.json({
+    success: true,
+    user: req.user,
+  });
 });
 
-// Update profile (firstName, lastName, mobile, bio, profileImage)
+// Update profile
 router.put("/update-profile", verifyToken, updateProfile);
 
 // Change password
