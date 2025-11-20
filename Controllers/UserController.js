@@ -1,43 +1,136 @@
 import User from "../Models/User.js";
+import bcrypt from "bcryptjs";
 
-/* ===========================================
-   GET ALL USERS
-=========================================== */
+/* ============================================================
+   GET ALL USERS (ADMIN ONLY)
+============================================================ */
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password -verificationCode");
-    res.json({ users });
+    const users = await User.find()
+      .select("-password -verificationCode"); // hide sensitive fields
+
+    return res.json({ users });
   } catch (err) {
     console.log("❌ Error fetching all users:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ===========================================
-   GET STAFF ONLY
-=========================================== */
+/* ============================================================
+   GET ONLY STAFF USERS
+============================================================ */
 export const getStaffUsers = async (req, res) => {
   try {
     const users = await User.find({
-      role: { $in: ["staff", "editor", "content_creator"] },
+      role: "staff", // now only staff exists in system
     }).select("-password -verificationCode");
 
-    res.json({ users });
+    return res.json({ users });
   } catch (err) {
     console.log("❌ Error fetching staff:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
-/* ===========================================
-   DELETE USER
-=========================================== */
+/* ============================================================
+   GET SINGLE USER (ADMIN OR SELF)
+============================================================ */
+export const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select("-password -verificationCode");
+    
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    return res.json({ user });
+  } catch (err) {
+    console.log("❌ Error fetching user:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ============================================================
+   UPDATE USER PROFILE (Self)
+============================================================ */
+export const updateProfile = async (req, res) => {
+  try {
+    const updates = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      updates,
+      { new: true }
+    ).select("-password -verificationCode");
+
+    return res.json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.log("❌ Profile update error:", err);
+    return res.status(500).json({ message: "Server failed" });
+  }
+};
+
+/* ============================================================
+   UPDATE USER ROLE (ADMIN ONLY)
+============================================================ */
+export const updateUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+
+    if (!["admin", "staff"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      req.params.id,
+      { role },
+      { new: true }
+    ).select("-password -verificationCode");
+
+    return res.json({ message: "Role updated", user: updated });
+  } catch (err) {
+    console.log("❌ Role update error:", err);
+    return res.status(500).json({ message: "Server failed" });
+  }
+};
+
+/* ============================================================
+   CHANGE PASSWORD (Self)
+============================================================ */
+export const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const match = await bcrypt.compare(oldPassword, user.password);
+    if (!match)
+      return res.status(400).json({ message: "Old password is incorrect" });
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    user.password = hashed;
+    await user.save();
+
+    return res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.log("❌ Change password error:", err);
+    return res.status(500).json({ message: "Server failed" });
+  }
+};
+
+/* ============================================================
+   DELETE USER (ADMIN ONLY)
+============================================================ */
 export const deleteUser = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
+
+    return res.json({ success: true });
   } catch (err) {
     console.log("❌ Delete failed:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
