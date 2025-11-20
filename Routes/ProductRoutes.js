@@ -37,7 +37,7 @@ router.put("/:id", verifyToken, allowStaffOrAdmin, updatePost);
 router.patch("/:id/status", verifyToken, allowStaffOrAdmin, changeStatus);
 router.patch("/:id/schedule", verifyToken, allowStaffOrAdmin, schedulePost);
 
-// DELETE POST (Admins only)
-router.delete("/:id", verifyToken, allowAdmin, deletePost);
+// DELETE POST (admin OR staff (only their own))
+router.delete("/:id", verifyToken, allowStaffOrAdmin, deletePost);
 
 export default router;
