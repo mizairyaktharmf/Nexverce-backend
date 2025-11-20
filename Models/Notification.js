@@ -17,7 +17,7 @@ const notificationSchema = new mongoose.Schema(
         "scheduled",
         "update",
         "delete",
-        "profile-update",
+        "profile-update", // only for sender
         "info",
       ],
       default: "info",
@@ -45,7 +45,7 @@ const notificationSchema = new mongoose.Schema(
       },
     ],
 
-    // Has the user seen it?
+    // Users who have already opened/seen this notification
     readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -57,7 +57,7 @@ const notificationSchema = new mongoose.Schema(
     performedBy: {
       userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       name: { type: String },
-      role: { type: String },
+      role: { type: String }, // admin or staff
       required: true,
     },
 
@@ -65,7 +65,7 @@ const notificationSchema = new mongoose.Schema(
     target: {
       id: { type: String },
       title: { type: String },
-      model: { type: String },
+      model: { type: String }, // "Product" or "Blog"
     },
   },
   { timestamps: true }
