@@ -10,6 +10,7 @@ import productRoutes from "./Routes/ProductRoutes.js";
 import authRoutes from "./Routes/AuthRoutes.js";
 import notificationRoutes from "./Routes/NotificationRoutes.js";
 import userRoutes from "./Routes/UserRoutes.js";
+import blogRoutes from "./Routes/BlogRoutes.js";   // ⭐ ADDED FOR BLOG SYSTEM
 
 dotenv.config();
 
@@ -26,11 +27,10 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",       // Admin (local)
-      "http://localhost:5174",       // Client (local)
+      "http://localhost:5173", // Admin (local)
+      "http://localhost:5174", // Client (local)
       "https://nexverce-admin.vercel.app",
       "https://nexverce-client.vercel.app",
-      "*"  // remove this on production for more security
     ],
     credentials: true,
   })
@@ -47,6 +47,7 @@ app.use(express.urlencoded({ extended: true }));
    REGISTER ROUTES
 =========================================== */
 app.use("/api/products", productRoutes);
+app.use("/api/blogs", blogRoutes);              // ⭐ BLOG ROUTES ADDED
 app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
