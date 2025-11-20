@@ -35,6 +35,7 @@ export const verifyToken = async (req, res, next) => {
 
     // Attach user to request object
     req.user = {
+      _id: user._id,    
       id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
