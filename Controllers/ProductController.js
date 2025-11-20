@@ -1,25 +1,49 @@
 // Controllers/ProductController.js
-import Product from "../Models/Product.js";
+
+import Product from "../Models/ProductModel.js";   // ✅ FIXED IMPORT
 import { createNotification } from "./NotificationController.js";
 
-/* ------------------------------
-   CREATE NEW POST
------------------------------- */
+/* ----------------------------------------------------
+   CREATE NEW PRODUCT OR BLOG POST
+---------------------------------------------------- */
 export const createPost = async (req, res) => {
   try {
-    const newPost = await Product.create(req.body);
+    const data = req.body;
 
-    await createNotification(`New post created: ${newPost.title}`, "published");
+    // Auto-generate slug if missing
+    const finalSlug =
+      data.slug ||
+      data.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+    const newPost = await Product.create({
+      ...data,
+      slug: finalSlug,
+    });
+
+    await createNotification({
+      message: `Created new ${newPost.type}`,
+      type: newPost.status === "published" ? "published" : "draft",
+      performedBy: req.user,
+      target: {
+        id: newPost._id,
+        title: newPost.title,
+        model: "Product",
+      },
+    });
 
     res.status(201).json(newPost);
-  } catch (err) {
+  } catch (error) {
+    console.log(error);
     res.status(500).json({ error: "Failed to create post" });
   }
 };
 
-/* ------------------------------
+/* ----------------------------------------------------
    GET ALL POSTS
------------------------------- */
+---------------------------------------------------- */
 export const getAllPosts = async (req, res) => {
   try {
     const posts = await Product.find().sort({ createdAt: -1 });
@@ -29,28 +53,44 @@ export const getAllPosts = async (req, res) => {
   }
 };
 
-/* ------------------------------
+/* ----------------------------------------------------
    GET SINGLE POST
------------------------------- */
+---------------------------------------------------- */
 export const getPostById = async (req, res) => {
   try {
     const post = await Product.findById(req.params.id);
+    if (!post) return res.status(404).json({ error: "Post not found" });
+
     res.json(post);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch post" });
   }
 };
 
-/* ------------------------------
+/* ----------------------------------------------------
    UPDATE POST
------------------------------- */
+---------------------------------------------------- */
 export const updatePost = async (req, res) => {
   try {
-    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
 
-    await createNotification(`Post updated: ${updated.title}`, "update");
+    if (!updated)
+      return res.status(404).json({ error: "Post not found" });
+
+    await createNotification({
+      message: `${updated.type} updated`,
+      type: "update",
+      performedBy: req.user,
+      target: {
+        id: updated._id,
+        title: updated.title,
+        model: "Product",
+      },
+    });
 
     res.json(updated);
   } catch (err) {
@@ -58,14 +98,26 @@ export const updatePost = async (req, res) => {
   }
 };
 
-/* ------------------------------
+/* ----------------------------------------------------
    DELETE POST
------------------------------- */
+---------------------------------------------------- */
 export const deletePost = async (req, res) => {
   try {
     const deleted = await Product.findByIdAndDelete(req.params.id);
 
-    await createNotification(`Post deleted: ${deleted.title}`, "delete");
+    if (!deleted)
+      return res.status(404).json({ error: "Post not found" });
+
+    await createNotification({
+      message: `${deleted.type} deleted`,
+      type: "delete",
+      performedBy: req.user,
+      target: {
+        id: deleted._id,
+        title: deleted.title,
+        model: "Product",
+      },
+    });
 
     res.json({ success: true });
   } catch (err) {
@@ -73,12 +125,15 @@ export const deletePost = async (req, res) => {
   }
 };
 
-/* ------------------------------
-   CHANGE STATUS (publish / draft)
------------------------------- */
+/* ----------------------------------------------------
+   TOGGLE STATUS (publish <-> draft)
+---------------------------------------------------- */
 export const changeStatus = async (req, res) => {
   try {
     const post = await Product.findById(req.params.id);
+
+    if (!post)
+      return res.status(404).json({ error: "Post not found" });
 
     const newStatus =
       post.status === "published" ? "draft" : "published";
@@ -86,10 +141,16 @@ export const changeStatus = async (req, res) => {
     post.status = newStatus;
     await post.save();
 
-    await createNotification(
-      `Post ${newStatus}: ${post.title}`,
-      newStatus === "published" ? "published" : "draft"
-    );
+    await createNotification({
+      message: `${post.type} marked as ${newStatus}`,
+      type: newStatus,
+      performedBy: req.user,
+      target: {
+        id: post._id,
+        title: post.title,
+        model: "Product",
+      },
+    });
 
     res.json(post);
   } catch (err) {
@@ -97,26 +158,35 @@ export const changeStatus = async (req, res) => {
   }
 };
 
-/* ------------------------------
-   SCHEDULED POST
------------------------------- */
+/* ----------------------------------------------------
+   SCHEDULE A POST
+---------------------------------------------------- */
 export const schedulePost = async (req, res) => {
   try {
-    const { scheduledTime } = req.body;
+    const { scheduledAt } = req.body;
 
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
       {
         status: "scheduled",
-        scheduledTime,
+        scheduledAt,
       },
       { new: true }
     );
 
-    await createNotification(
-      `Post scheduled: ${updated.title}`,
-      "scheduled"
-    );
+    if (!updated)
+      return res.status(404).json({ error: "Post not found" });
+
+    await createNotification({
+      message: `${updated.type} scheduled`,
+      type: "scheduled",
+      performedBy: req.user,
+      target: {
+        id: updated._id,
+        title: updated.title,
+        model: "Product",
+      },
+    });
 
     res.json(updated);
   } catch (err) {
