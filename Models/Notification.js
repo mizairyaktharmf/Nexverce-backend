@@ -17,7 +17,7 @@ const notificationSchema = new mongoose.Schema(
         "scheduled",
         "update",
         "delete",
-        "profile-update", // only for sender
+        "profile-update", // profile update is only for sender
         "info",
       ],
       default: "info",
@@ -37,7 +37,7 @@ const notificationSchema = new mongoose.Schema(
       default: null,
     },
 
-    // If notification is deleted only for specific users (NOT global)
+    // If a user deletes notification (deleted only for that user)
     deletedBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -45,7 +45,7 @@ const notificationSchema = new mongoose.Schema(
       },
     ],
 
-    // Users who have already opened/seen this notification
+    // If user opened notification (read only by that user)
     readBy: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -55,10 +55,19 @@ const notificationSchema = new mongoose.Schema(
 
     // Who performed the action?
     performedBy: {
-      userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      name: { type: String },
-      role: { type: String }, // admin or staff
-      required: true,
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+      name: {
+        type: String,
+        required: true,
+      },
+      role: {
+        type: String,
+        required: true,
+      },
     },
 
     // Which post/blog is affected
