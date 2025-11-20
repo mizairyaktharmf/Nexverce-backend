@@ -15,11 +15,14 @@ export const createNotification = async ({
     await Notification.create({
       message,
       type,
+
+      // FIXED: _id instead of id
       performedBy: {
-        userId: performedBy.id,
-        name: performedBy.firstName + " " + performedBy.lastName,
+        userId: performedBy._id,
+        name: `${performedBy.firstName} ${performedBy.lastName}`,
         role: performedBy.role,
       },
+
       target,
       recipientType,
       recipientUserId,
@@ -34,16 +37,15 @@ export const createNotification = async ({
 ============================================================ */
 export const getNotifications = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     const notes = await Notification.find({
-      deletedBy: { $ne: userId }, // hide deleted notifications
+      deletedBy: { $ne: userId },
       $or: [
         { recipientType: "all" },
         { recipientType: "specific", recipientUserId: userId },
       ],
-    })
-      .sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 });
 
     return res.json(notes);
   } catch (err) {
@@ -53,11 +55,11 @@ export const getNotifications = async (req, res) => {
 };
 
 /* ============================================================
-   MARK ONE NOTIFICATION AS READ (Self Only)
+   MARK ONE NOTIFICATION AS READ
 ============================================================ */
 export const markAsRead = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     await Notification.findByIdAndUpdate(req.params.id, {
       $addToSet: { readBy: userId },
@@ -71,11 +73,11 @@ export const markAsRead = async (req, res) => {
 };
 
 /* ============================================================
-   MARK ALL NOTIFICATIONS AS READ (Self Only)
+   MARK ALL AS READ
 ============================================================ */
 export const markAllRead = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     await Notification.updateMany(
       {
@@ -96,11 +98,11 @@ export const markAllRead = async (req, res) => {
 };
 
 /* ============================================================
-   DELETE NOTIFICATION FOR CURRENT USER (Self Only)
+   DELETE NOTIFICATION FOR CURRENT USER ONLY
 ============================================================ */
 export const deleteNotificationForUser = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     await Notification.findByIdAndUpdate(req.params.id, {
       $addToSet: { deletedBy: userId },
