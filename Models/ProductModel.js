@@ -16,14 +16,14 @@ const productSchema = new mongoose.Schema(
     referralLink: { type: String },
     image: { type: String },
 
-    // 🟣 TYPE = "product" (this helps determine edit type)
+    // TYPE = product
     type: { type: String, default: "product" },
 
-    // CONTENT (OLD HTML SUPPORT)
+    // OLD HTML SUPPORT
     content: { type: String },
 
-    // ⭐ NEW BLOCK EDITOR JSON
-    blocks: {
+    // ⭐ BLOCK EDITOR JSON
+    contentBlocks: {
       type: Array,
       default: [],
     },
@@ -35,19 +35,25 @@ const productSchema = new mongoose.Schema(
       default: "draft",
     },
 
-    // SCHEDULED POSTS
+    // SCHEDULE TIME
     scheduledAt: { type: Date },
 
     // ANALYTICS
     views: { type: Number, default: 0 },
-    viewedCountries: {
-      type: Array,
-      default: [],
+    viewedCountries: { type: Array, default: [] },
+
+    // USER WHO CREATED THE POST
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
 
-    // ADMIN INFO
-    createdBy: { type: String }, // userid or name
-    updatedBy: { type: String },
+    // USER WHO LAST UPDATED THE POST
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   { timestamps: true }
 );
