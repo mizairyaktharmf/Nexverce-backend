@@ -2,32 +2,52 @@ import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
   {
+    // BASIC INFO
     title: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+
     description: { type: String },
-    price: { type: String },
-
-    currency: { type: String, default: "USD" },
-
+    category: { type: String, required: true },
     tag: { type: String },
-    category: { type: String },
-    image: { type: String },
-    type: { type: String },
-    slug: { type: String },
 
-    // OLD CONTENT (HTML)
+    // PRODUCT / DEAL DATA
+    price: { type: String },
+    currency: { type: String, default: "USD" },
+    referralLink: { type: String },
+    image: { type: String },
+
+    // 🟣 TYPE = "product" (this helps determine edit type)
+    type: { type: String, default: "product" },
+
+    // CONTENT (OLD HTML SUPPORT)
     content: { type: String },
 
-    // ⭐ NEW FIELD FOR BLOCK SYSTEM
-    contentBlocks: {
+    // ⭐ NEW BLOCK EDITOR JSON
+    blocks: {
       type: Array,
       default: [],
     },
 
-    referralLink: { type: String },
+    // STATUS
+    status: {
+      type: String,
+      enum: ["draft", "published", "scheduled"],
+      default: "draft",
+    },
 
-    status: { type: String, default: "draft" },
-    endTime: { type: String },
+    // SCHEDULED POSTS
     scheduledAt: { type: Date },
+
+    // ANALYTICS
+    views: { type: Number, default: 0 },
+    viewedCountries: {
+      type: Array,
+      default: [],
+    },
+
+    // ADMIN INFO
+    createdBy: { type: String }, // userid or name
+    updatedBy: { type: String },
   },
   { timestamps: true }
 );
