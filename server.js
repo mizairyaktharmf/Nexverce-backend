@@ -2,25 +2,44 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import helmet from "helmet";
 import connectDB from "./Config/MangoDb.js";
 
 // ROUTES
 import productRoutes from "./Routes/ProductRoutes.js";
 import authRoutes from "./Routes/AuthRoutes.js";
 import notificationRoutes from "./Routes/NotificationRoutes.js";
-import userRoutes from "./Routes/UserRoutes.js";   // ⭐ ADDED
+import userRoutes from "./Routes/UserRoutes.js";
 
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
 
-console.log("RESEND KEY Loaded:", !!process.env.RESEND_API_KEY);
-
 const app = express();
 
-// Global Middlewares
-app.use(cors());
+/* ===========================================
+   GLOBAL MIDDLEWARES
+=========================================== */
+
+// CORS — allow your admin & client domains
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",       // Admin (local)
+      "http://localhost:5174",       // Client (local)
+      "https://nexverce-admin.vercel.app",
+      "https://nexverce-client.vercel.app",
+      "*"  // remove this on production for more security
+    ],
+    credentials: true,
+  })
+);
+
+// Security headers
+app.use(helmet());
+
+// Parse JSON
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -30,7 +49,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notificationRoutes);
-app.use("/api/users", userRoutes);  // ⭐ ADDED
+app.use("/api/users", userRoutes);
 
 /* ===========================================
    DEFAULT HOME ROUTE
@@ -40,7 +59,14 @@ app.get("/", (req, res) => {
 });
 
 /* ===========================================
-   ERROR HANDLER
+   HANDLE 404 — Route Not Found
+=========================================== */
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
+
+/* ===========================================
+   GLOBAL ERROR HANDLER
 =========================================== */
 app.use((err, req, res, next) => {
   console.error("🔥 Server Error:", err);
