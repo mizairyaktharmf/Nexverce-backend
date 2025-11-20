@@ -3,33 +3,54 @@ import User from "../Models/User.js";
 
 export const verifyToken = async (req, res, next) => {
   try {
-    // Extract bearer token
+    // Get token from header
     const authHeader = req.headers.authorization;
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Access denied. No token provided." });
+      return res.status(401).json({
+        message: "No token provided. Access denied.",
+      });
     }
 
     const token = authHeader.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "Access denied. Token missing." });
-    }
 
-    // Verify token
+    // Verify JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch full user (IMPORTANT)
-    const user = await User.findById(decoded.id).select("-password");
+    // Fetch user from DB
+    const user = await User.findById(decoded.id).select("-password -verificationCode");
 
     if (!user) {
-      return res.status(401).json({ message: "User not found or deleted." });
+      return res.status(401).json({
+        message: "User not found or removed.",
+      });
     }
 
-    // Attach user object to request
-    req.user = user;
+    // Check if user is verified
+    if (!user.verified) {
+      return res.status(403).json({
+        message: "Please verify your email before accessing this.",
+      });
+    }
+
+    // Attach user to request object
+    req.user = {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      email: user.email,
+      profileImage: user.profileImage,
+      mobile: user.mobile,
+      bio: user.bio,
+    };
 
     next();
   } catch (err) {
     console.error("❌ Token verification error:", err);
-    return res.status(401).json({ message: "Invalid or expired token" });
+
+    return res.status(401).json({
+      message: "Invalid or expired token.",
+    });
   }
 };
