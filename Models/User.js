@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
-// Allowed roles in DB
-const roles = ["owner", "admin", "staff"];
+// Allowed roles in system
+const roles = ["admin", "staff"];
 
 const userSchema = new mongoose.Schema(
   {
@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Profile Fields
+    // Profile
     profileImage: {
       type: String,
       default: "",
@@ -46,10 +46,7 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
-    // 🔥 NEW ROLE SYSTEM
-    // owner = special
-    // admin = privileged
-    // staff = all other job titles
+    // 🔥 ONLY TWO ROLES → admin OR staff
     role: {
       type: String,
       enum: roles,
@@ -61,7 +58,6 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
     verificationCode: {
       type: String,
     },
