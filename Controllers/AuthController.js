@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
+import UserActivity from "../Models/UserActivity.js";
+
 import { sendMail } from "../Utils/SendMail.js";
 
 const PASS_REGEX =
@@ -152,6 +154,16 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    /* ============================================
+       ⭐ NEW — SAVE USER LOGIN ACTIVITY
+    ============================================ */
+    await UserActivity.create({
+      userId: user._id,
+      loginTime: new Date(),
+      online: true,
+      lastSeen: new Date(),
+    });
+
     return res.json({
       message: "Login successful",
       token,
@@ -160,9 +172,8 @@ export const login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-         role: user.role,             // ⭐ Required for access control
-         verified: user.verified,     // ⭐ So frontend knows if verified
         role: user.role,
+        verified: user.verified,
         profileImage: user.profileImage,
         mobile: user.mobile,
         bio: user.bio,
@@ -170,6 +181,28 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.log("Login Error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+/* =========================================================
+   LOGOUT (Track logout activity)
+========================================================= */
+export const logoutUser = async (req, res) => {
+  try {
+    await UserActivity.findOneAndUpdate(
+      { userId: req.user.id, online: true },
+      {
+        online: false,
+        logoutTime: new Date(),
+        lastSeen: new Date(),
+      }
+    );
+
+    return res.json({ message: "Logout successful" });
+  } catch (error) {
+    console.log("Logout Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -1,14 +1,13 @@
 import User from "../Models/User.js";
 import bcrypt from "bcryptjs";
+import UserActivity from "../Models/UserActivity.js";   // ⭐ NEW IMPORT
 
 /* ============================================================
    GET ALL USERS (ADMIN ONLY)
 ============================================================ */
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find()
-      .select("-password -verificationCode"); // hide sensitive fields
-
+    const users = await User.find().select("-password -verificationCode");
     return res.json({ users });
   } catch (err) {
     console.log("❌ Error fetching all users:", err);
@@ -21,9 +20,8 @@ export const getAllUsers = async (req, res) => {
 ============================================================ */
 export const getStaffUsers = async (req, res) => {
   try {
-    const users = await User.find({
-      role: "staff", // now only staff exists in system
-    }).select("-password -verificationCode");
+    const users = await User.find({ role: "staff" })
+      .select("-password -verificationCode");
 
     return res.json({ users });
   } catch (err) {
@@ -39,7 +37,7 @@ export const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
       .select("-password -verificationCode");
-    
+
     if (!user) return res.status(404).json({ message: "User not found" });
 
     return res.json({ user });
@@ -50,7 +48,23 @@ export const getUserById = async (req, res) => {
 };
 
 /* ============================================================
-   UPDATE USER PROFILE (Self)
+   ⭐ NEW — GET STAFF LOGIN / LOGOUT ACTIVITY
+============================================================ */
+export const getStaffActivity = async (req, res) => {
+  try {
+    const activity = await UserActivity.find()
+      .populate("userId", "firstName lastName email role profileImage")
+      .sort({ loginTime: -1 }); // latest first
+
+    return res.json({ activity });
+  } catch (err) {
+    console.log("❌ Staff activity error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ============================================================
+   UPDATE PROFILE (SELF)
 ============================================================ */
 export const updateProfile = async (req, res) => {
   try {
@@ -97,7 +111,7 @@ export const updateUserRole = async (req, res) => {
 };
 
 /* ============================================================
-   CHANGE PASSWORD (Self)
+   CHANGE PASSWORD (SELF)
 ============================================================ */
 export const changePassword = async (req, res) => {
   try {
@@ -108,7 +122,7 @@ export const changePassword = async (req, res) => {
 
     const match = await bcrypt.compare(oldPassword, user.password);
     if (!match)
-      return res.status(400).json({ message: "Old password is incorrect" });
+      return res.status(400).json({ message: "Old password incorrect" });
 
     const hashed = await bcrypt.hash(newPassword, 12);
     user.password = hashed;
@@ -122,12 +136,11 @@ export const changePassword = async (req, res) => {
 };
 
 /* ============================================================
-   DELETE USER (ADMIN ONLY)
+   DELETE USER
 ============================================================ */
 export const deleteUser = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
-
     return res.json({ success: true });
   } catch (err) {
     console.log("❌ Delete failed:", err);

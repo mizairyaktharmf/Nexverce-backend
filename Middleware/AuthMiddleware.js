@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
+import UserActivity from "../Models/UserActivity.js";
+
 
 export const verifyToken = async (req, res, next) => {
   try {
@@ -46,6 +48,11 @@ export const verifyToken = async (req, res, next) => {
       mobile: user.mobile,
       bio: user.bio,
     };
+
+      await UserActivity.findOneAndUpdate(
+    { userId: user._id, online: true },
+    { lastSeen: new Date() }
+  );
 
     next();
   } catch (err) {

@@ -4,6 +4,7 @@ import {
   signup,
   login,
   verifyEmail,
+  logoutUser,     // ⭐ Added logout controller
 } from "../Controllers/AuthController.js";
 
 import {
@@ -29,11 +30,12 @@ router.post("/login", login);
 // Verify account via OTP
 router.post("/verify", verifyEmail);
 
+
 /* ---------------------------------------------
-   🔒 PROTECTED ROUTES
+   🔒 PROTECTED ROUTES (must be logged in)
 ---------------------------------------------- */
 
-// Get logged-in user (NEW — required for frontend)
+// Get logged-in user (used by frontend auto-refresh)
 router.get("/me", verifyToken, (req, res) => {
   return res.json({
     success: true,
@@ -46,5 +48,13 @@ router.put("/update-profile", verifyToken, updateProfile);
 
 // Change password
 router.post("/change-password", verifyToken, changePassword);
+
+// NEW: Logout (marks user offline, saves logout time)
+router.post("/logout", verifyToken, logoutUser);
+
+
+/* ---------------------------------------------
+   EXPORT ROUTER
+---------------------------------------------- */
 
 export default router;
