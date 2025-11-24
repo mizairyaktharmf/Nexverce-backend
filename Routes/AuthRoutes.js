@@ -17,7 +17,7 @@ import { verifyToken } from "../Middleware/AuthMiddleware.js";
 const router = express.Router();
 
 /* ---------------------------------------------
-   🔐 Authentication Routes
+   🔐 AUTH ROUTES
 ---------------------------------------------- */
 
 // Signup (only @nexverce.com)
@@ -26,18 +26,18 @@ router.post("/signup", signup);
 // Login
 router.post("/login", login);
 
-// Verify account (email OTP)
+// Verify account via OTP
 router.post("/verify", verifyEmail);
 
 /* ---------------------------------------------
-   🔒 Protected Routes
+   🔒 PROTECTED ROUTES
 ---------------------------------------------- */
 
-// Get logged-in user
+// Get logged-in user (NEW — required for frontend)
 router.get("/me", verifyToken, (req, res) => {
   return res.json({
     success: true,
-    user: req.user,
+    user: req.user, // comes from AuthMiddleware
   });
 });
 

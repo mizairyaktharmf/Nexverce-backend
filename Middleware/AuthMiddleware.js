@@ -17,8 +17,9 @@ export const verifyToken = async (req, res, next) => {
     // Verify JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Fetch user from DB
-    const user = await User.findById(decoded.id).select("-password -verificationCode");
+    // Fetch user
+    const user = await User.findById(decoded.id)
+      .select("-password -verificationCode");
 
     if (!user) {
       return res.status(401).json({
@@ -26,21 +27,21 @@ export const verifyToken = async (req, res, next) => {
       });
     }
 
-    // Check if user is verified
+    // User must be verified to access protected routes
     if (!user.verified) {
       return res.status(403).json({
         message: "Please verify your email before accessing this.",
       });
     }
 
-    // Attach user to request object
+    // ⭐ Attach user to request (IMPORTANT)
     req.user = {
-      _id: user._id,    
+      _id: user._id,
       id: user._id,
+      role: user.role,       // ⭐ Critical for role control
+      email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
-      email: user.email,
       profileImage: user.profileImage,
       mobile: user.mobile,
       bio: user.bio,

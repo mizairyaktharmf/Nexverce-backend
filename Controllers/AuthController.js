@@ -160,6 +160,8 @@ export const login = async (req, res) => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+         role: user.role,             // ⭐ Required for access control
+         verified: user.verified,     // ⭐ So frontend knows if verified
         role: user.role,
         profileImage: user.profileImage,
         mobile: user.mobile,
