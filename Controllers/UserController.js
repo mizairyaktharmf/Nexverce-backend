@@ -1,6 +1,6 @@
 import User from "../Models/User.js";
 import bcrypt from "bcryptjs";
-import UserActivity from "../Models/UserActivity.js";   // ⭐ NEW IMPORT
+import UserActivity from "../Models/UserActivity.js"; // ⭐ ACTIVITY MODEL
 
 /* ============================================================
    GET ALL USERS (ADMIN ONLY)
@@ -48,17 +48,34 @@ export const getUserById = async (req, res) => {
 };
 
 /* ============================================================
-   ⭐ NEW — GET STAFF LOGIN / LOGOUT ACTIVITY
+   ⭐ GET ALL STAFF LOGIN/LOGOUT ACTIVITY
 ============================================================ */
 export const getStaffActivity = async (req, res) => {
   try {
     const activity = await UserActivity.find()
       .populate("userId", "firstName lastName email role profileImage")
-      .sort({ loginTime: -1 }); // latest first
+      .sort({ loginTime: -1 });
 
     return res.json({ activity });
   } catch (err) {
-    console.log("❌ Staff activity error:", err);
+    console.log("❌ Activity fetch error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ============================================================
+   ⭐ GET SPECIFIC USER LOGIN/LOGOUT HISTORY
+============================================================ */
+export const getUserActivity = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const logs = await UserActivity.find({ userId: id })
+      .sort({ loginTime: -1 });
+
+    return res.json({ success: true, logs });
+  } catch (err) {
+    console.log("❌ Activity fetch error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -131,16 +148,17 @@ export const changePassword = async (req, res) => {
     return res.json({ message: "Password updated successfully" });
   } catch (err) {
     console.log("❌ Change password error:", err);
-    return res.status(500).json({ message: "Server failed" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
 /* ============================================================
-   DELETE USER
+   DELETE USER (ADMIN)
 ============================================================ */
 export const deleteUser = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
+
     return res.json({ success: true });
   } catch (err) {
     console.log("❌ Delete failed:", err);
