@@ -165,3 +165,22 @@ export const deleteUser = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/* =========================================================
+   UPDATE USER PRESENCE (HEARTBEAT)
+========================================================= */
+export const updatePresence = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    await UserActivity.findOneAndUpdate(
+      { userId, online: true },
+      { lastSeen: new Date() }
+    );
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.log("Presence update error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

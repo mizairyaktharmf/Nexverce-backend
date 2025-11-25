@@ -3,13 +3,17 @@ import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
 import UserActivity from "../Models/UserActivity.js";
 
+import geoip from "geoip-lite";
+import { UAParser } from "ua-parser-js";
+
 import { sendMail } from "../Utils/SendMail.js";
+
 
 const PASS_REGEX =
   /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
 /* =========================================================
-   SIGNUP (Only @nexverce.com emails allowed)
+   SIGNUP (NO CHANGE)
 ========================================================= */
 export const signup = async (req, res) => {
   try {
@@ -22,17 +26,14 @@ export const signup = async (req, res) => {
       role,
     } = req.body;
 
-    // Basic validation
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Password match
     if (password !== confirmPassword) {
       return res.status(400).json({ message: "Passwords do not match" });
     }
 
-    // Password strength
     if (!PASS_REGEX.test(password)) {
       return res.status(400).json({
         message:
@@ -40,31 +41,25 @@ export const signup = async (req, res) => {
       });
     }
 
-    // 🛑 ALLOW ONLY COMPANY EMAILS
     if (!email.endsWith("@nexverce.com")) {
       return res.status(403).json({
         message: "Only @nexverce.com emails can register to the admin panel.",
       });
     }
 
-    // Check existing user
     const exists = await User.findOne({ email });
     if (exists) {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Generate verification code
     const verificationCode = Math.floor(
       100000 + Math.random() * 900000
     ).toString();
 
-    // Assign role: only admin or staff
     const finalRole = role === "admin" ? "admin" : "staff";
 
-    // Create user
     await User.create({
       firstName,
       lastName,
@@ -75,7 +70,6 @@ export const signup = async (req, res) => {
       verificationCode,
     });
 
-    // Send email
     await sendMail(email, verificationCode);
 
     return res.status(201).json({
@@ -88,21 +82,18 @@ export const signup = async (req, res) => {
 };
 
 /* =========================================================
-   VERIFY EMAIL
+   VERIFY EMAIL (NO CHANGE)
 ========================================================= */
 export const verifyEmail = async (req, res) => {
   try {
     const { email, code } = req.body;
 
     if (!email || !code) {
-      return res
-        .status(400)
-        .json({ message: "Email and code are required" });
+      return res.status(400).json({ message: "Email and code are required" });
     }
 
     const user = await User.findOne({ email });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     if (user.verified)
       return res.status(400).json({ message: "Already verified" });
@@ -123,16 +114,14 @@ export const verifyEmail = async (req, res) => {
 };
 
 /* =========================================================
-   LOGIN
+   LOGIN (⭐ UPDATED WITH IP + COUNTRY + DEVICE + TIMEZONE)
 ========================================================= */
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password)
-      return res
-        .status(400)
-        .json({ message: "Email and password required" });
+      return res.status(400).json({ message: "Email and password required" });
 
     const user = await User.findOne({ email });
     if (!user)
@@ -154,14 +143,43 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    /* ======================================================
+       ⭐ NEW STEP 2 — CAPTURE IP, LOCATION, DEVICE, TIMEZONE
+    ====================================================== */
+
+    // 📌 Get IP (covers proxies, render, vercel etc.)
+    const ip =
+      req.headers["x-forwarded-for"]?.split(",")[0] ||
+      req.socket.remoteAddress ||
+      "Unknown";
+
+    // 📌 GEO lookup
+    const geo = geoip.lookup(ip);
+    const country = geo?.country || "Unknown";
+    const city = geo?.city || "Unknown";
+
+    // 📌 Device & OS
+    const parser = new UAParser(req.headers["user-agent"]);
+    const deviceInfo = parser.getResult();
+
+    // 📌 Timezone from client
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     /* ============================================
-       ⭐ NEW — SAVE USER LOGIN ACTIVITY
+       ⭐ SAVE LOGIN ACTIVITY
     ============================================ */
     await UserActivity.create({
       userId: user._id,
       loginTime: new Date(),
       online: true,
       lastSeen: new Date(),
+      ip,
+      country,
+      city,
+      deviceType: deviceInfo.device.type || "Desktop",
+      os: deviceInfo.os.name,
+      browser: deviceInfo.browser.name,
+      timezone,
     });
 
     return res.json({
@@ -185,9 +203,8 @@ export const login = async (req, res) => {
   }
 };
 
-
 /* =========================================================
-   LOGOUT (Track logout activity)
+   LOGOUT (⭐ UPDATED)
 ========================================================= */
 export const logoutUser = async (req, res) => {
   try {

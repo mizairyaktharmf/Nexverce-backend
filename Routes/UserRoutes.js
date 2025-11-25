@@ -11,10 +11,23 @@ import {
   deleteUser,
   getUserById,
   updateUserRole,
-  getUserActivity,   // ⭐ FIX → You forgot to import this
+  getUserActivity,     // ⭐ USER ACTIVITY LOGS
+  updatePresence,      // ⭐ ONLINE PRESENCE HEARTBEAT
 } from "../Controllers/UserController.js";
 
 const router = express.Router();
+
+/* ======================================================
+   ⭐ PRESENCE HEARTBEAT (STAFF OR ADMIN)
+   UPDATE LAST SEEN + ONLINE STATUS
+====================================================== */
+router.post("/heartbeat", verifyToken, allowStaffOrAdmin, updatePresence);
+
+/* ======================================================
+   ⭐ USER ACTIVITY LOGS (ADMIN ONLY)
+   — MUST COME BEFORE :id
+====================================================== */
+router.get("/activity/:id", verifyToken, allowAdmin, getUserActivity);
 
 /* ======================================================
    GET ALL USERS (ADMIN ONLY)
@@ -25,12 +38,6 @@ router.get("/all", verifyToken, allowAdmin, getAllUsers);
    GET ALL STAFF (ADMIN ONLY)
 ====================================================== */
 router.get("/staffs", verifyToken, allowAdmin, getStaffUsers);
-
-/* ======================================================
-   ⭐ GET USER ACTIVITY LOGS (ADMIN ONLY)
-   (placed BEFORE :id route to avoid conflict)
-====================================================== */
-router.get("/activity/:id", verifyToken, allowAdmin, getUserActivity);
 
 /* ======================================================
    GET SINGLE USER (ADMIN ONLY)
