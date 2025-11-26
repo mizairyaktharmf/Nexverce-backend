@@ -12,6 +12,19 @@ import { sendMail } from "../Utils/SendMail.js";
 const PASS_REGEX =
   /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
+// Optional: map ISO country codes → full names
+const COUNTRY_NAMES = {
+  AE: "United Arab Emirates",
+  LK: "Sri Lanka",
+  IN: "India",
+  UK: "United Kingdom",
+  GB: "United Kingdom",
+  US: "United States",
+  CA: "Canada",
+  AU: "Australia",
+  // add more codes here later if you want
+};
+
 /* =========================================================
    SIGNUP  (same as before)
 ========================================================= */
@@ -118,7 +131,7 @@ export const verifyEmail = async (req, res) => {
 ========================================================= */
 export const login = async (req, res) => {
   try {
-    // ⬅️ we also accept timezone from frontend
+    // ⬅️ also accept timezone from frontend
     const { email, password, timezone } = req.body;
 
     if (!email || !password) {
@@ -174,7 +187,9 @@ export const login = async (req, res) => {
 
     // Geo by IP
     const geo = ip ? geoip.lookup(ip) : null;
-    const country = geo?.country || "Unknown";
+    const rawCountryCode = geo?.country || "Unknown";
+    const country =
+      COUNTRY_NAMES[rawCountryCode] || rawCountryCode || "Unknown";
     const city = geo?.city || "Unknown";
 
     // Device info from User-Agent
@@ -186,9 +201,17 @@ export const login = async (req, res) => {
     const browser = deviceInfo.browser.name || "Unknown Browser";
 
     // Timezone – prefer client-sent, otherwise fallback to server tz
-    const clientTimezone =
-      timezone ||
-      (Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown");
+    let clientTimezone = "Unknown";
+    if (timezone) {
+      clientTimezone = timezone;
+    } else {
+      try {
+        clientTimezone =
+          Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown";
+      } catch {
+        clientTimezone = "Unknown";
+      }
+    }
 
     /* -----------------------------------------------------
        3) CREATE NEW LOGIN ACTIVITY
