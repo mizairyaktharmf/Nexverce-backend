@@ -1,3 +1,4 @@
+// Controllers/AuthController.js
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../Models/User.js";
@@ -8,12 +9,11 @@ import { UAParser } from "ua-parser-js";
 
 import { sendMail } from "../Utils/SendMail.js";
 
-
 const PASS_REGEX =
   /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
 /* =========================================================
-   SIGNUP (NO CHANGE)
+   SIGNUP  (same as before)
 ========================================================= */
 export const signup = async (req, res) => {
   try {
@@ -82,7 +82,7 @@ export const signup = async (req, res) => {
 };
 
 /* =========================================================
-   VERIFY EMAIL (NO CHANGE)
+   VERIFY EMAIL  (same as before)
 ========================================================= */
 export const verifyEmail = async (req, res) => {
   try {
@@ -114,18 +114,23 @@ export const verifyEmail = async (req, res) => {
 };
 
 /* =========================================================
-   LOGIN (⭐ UPDATED WITH IP + COUNTRY + DEVICE + TIMEZONE)
+   LOGIN  ⭐ with IP + country + device + timezone + session close
 ========================================================= */
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    // ⬅️ we also accept timezone from frontend
+    const { email, password, timezone } = req.body;
 
-    if (!email || !password)
-      return res.status(400).json({ message: "Email and password required" });
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password required" });
+    }
 
     const user = await User.findOne({ email });
-    if (!user)
+    if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     if (!user.verified) {
       return res.status(403).json({
@@ -134,8 +139,9 @@ export const login = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -143,45 +149,68 @@ export const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    /* ======================================================
-       ⭐ NEW STEP 2 — CAPTURE IP, LOCATION, DEVICE, TIMEZONE
-    ====================================================== */
+    /* -----------------------------------------------------
+       1) CLOSE ANY PREVIOUS "ONLINE" SESSIONS
+    ----------------------------------------------------- */
+    await UserActivity.updateMany(
+      { userId: user._id, online: true },
+      {
+        online: false,
+        logoutTime: new Date(),
+        lastSeen: new Date(),
+      }
+    );
 
-    // 📌 Get IP (covers proxies, render, vercel etc.)
+    /* -----------------------------------------------------
+       2) COLLECT IP, LOCATION, DEVICE, TIMEZONE
+    ----------------------------------------------------- */
+
+    // IP (behind proxies etc.)
     const ip =
-      req.headers["x-forwarded-for"]?.split(",")[0] ||
-      req.socket.remoteAddress ||
+      (req.headers["x-forwarded-for"] &&
+        req.headers["x-forwarded-for"].split(",")[0]) ||
+      req.socket?.remoteAddress ||
       "Unknown";
 
-    // 📌 GEO lookup
-    const geo = geoip.lookup(ip);
+    // Geo by IP
+    const geo = ip ? geoip.lookup(ip) : null;
     const country = geo?.country || "Unknown";
     const city = geo?.city || "Unknown";
 
-    // 📌 Device & OS
+    // Device info from User-Agent
     const parser = new UAParser(req.headers["user-agent"]);
     const deviceInfo = parser.getResult();
 
-    // 📌 Timezone from client
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const deviceType = deviceInfo.device.type || "Desktop";
+    const os = deviceInfo.os.name || "Unknown OS";
+    const browser = deviceInfo.browser.name || "Unknown Browser";
 
-    /* ============================================
-       ⭐ SAVE LOGIN ACTIVITY
-    ============================================ */
+    // Timezone – prefer client-sent, otherwise fallback to server tz
+    const clientTimezone =
+      timezone ||
+      (Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown");
+
+    /* -----------------------------------------------------
+       3) CREATE NEW LOGIN ACTIVITY
+    ----------------------------------------------------- */
     await UserActivity.create({
       userId: user._id,
       loginTime: new Date(),
-      online: true,
+      logoutTime: null,
       lastSeen: new Date(),
+      online: true,
       ip,
       country,
       city,
-      deviceType: deviceInfo.device.type || "Desktop",
-      os: deviceInfo.os.name,
-      browser: deviceInfo.browser.name,
-      timezone,
+      deviceType,
+      os,
+      browser,
+      timezone: clientTimezone,
     });
 
+    /* -----------------------------------------------------
+       4) NORMAL LOGIN RESPONSE
+    ----------------------------------------------------- */
     return res.json({
       message: "Login successful",
       token,
@@ -204,10 +233,11 @@ export const login = async (req, res) => {
 };
 
 /* =========================================================
-   LOGOUT (⭐ UPDATED)
+   LOGOUT  ⭐ marks current session as offline
 ========================================================= */
 export const logoutUser = async (req, res) => {
   try {
+    // req.user is set in AuthMiddleware.verifyToken
     await UserActivity.findOneAndUpdate(
       { userId: req.user.id, online: true },
       {
