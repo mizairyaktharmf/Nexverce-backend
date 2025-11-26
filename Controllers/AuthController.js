@@ -22,11 +22,11 @@ const COUNTRY_NAMES = {
   US: "United States",
   CA: "Canada",
   AU: "Australia",
-  // add more codes here later if you want
+  // add more codes later if needed
 };
 
 /* =========================================================
-   SIGNUP  (same as before)
+   SIGNUP
 ========================================================= */
 export const signup = async (req, res) => {
   try {
@@ -95,7 +95,7 @@ export const signup = async (req, res) => {
 };
 
 /* =========================================================
-   VERIFY EMAIL  (same as before)
+   VERIFY EMAIL
 ========================================================= */
 export const verifyEmail = async (req, res) => {
   try {
@@ -127,34 +127,29 @@ export const verifyEmail = async (req, res) => {
 };
 
 /* =========================================================
-   LOGIN  ⭐ with IP + country + device + timezone + session close
+   LOGIN  ⭐ WITH COUNTRY + TIMEZONE + IP + DEVICE
 ========================================================= */
 export const login = async (req, res) => {
   try {
-    // ⬅️ also accept timezone from frontend
+    // accept timezone from frontend
     const { email, password, timezone } = req.body;
 
     if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password required" });
+      return res.status(400).json({ message: "Email and password required" });
     }
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     if (!user.verified) {
-      return res.status(403).json({
-        message: "Please verify your email before logging in.",
-      });
+      return res
+        .status(403)
+        .json({ message: "Please verify your email before logging in." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
-    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -163,7 +158,7 @@ export const login = async (req, res) => {
     );
 
     /* -----------------------------------------------------
-       1) CLOSE ANY PREVIOUS "ONLINE" SESSIONS
+       1) CLOSE ANY PREVIOUS ACTIVE SESSION
     ----------------------------------------------------- */
     await UserActivity.updateMany(
       { userId: user._id, online: true },
@@ -178,21 +173,19 @@ export const login = async (req, res) => {
        2) COLLECT IP, LOCATION, DEVICE, TIMEZONE
     ----------------------------------------------------- */
 
-    // IP (behind proxies etc.)
     const ip =
-      (req.headers["x-forwarded-for"] &&
-        req.headers["x-forwarded-for"].split(",")[0]) ||
+      req.headers["x-forwarded-for"]?.split(",")[0] ||
       req.socket?.remoteAddress ||
       "Unknown";
 
-    // Geo by IP
     const geo = ip ? geoip.lookup(ip) : null;
     const rawCountryCode = geo?.country || "Unknown";
+
     const country =
       COUNTRY_NAMES[rawCountryCode] || rawCountryCode || "Unknown";
+
     const city = geo?.city || "Unknown";
 
-    // Device info from User-Agent
     const parser = new UAParser(req.headers["user-agent"]);
     const deviceInfo = parser.getResult();
 
@@ -200,7 +193,6 @@ export const login = async (req, res) => {
     const os = deviceInfo.os.name || "Unknown OS";
     const browser = deviceInfo.browser.name || "Unknown Browser";
 
-    // Timezone – prefer client-sent, otherwise fallback to server tz
     let clientTimezone = "Unknown";
     if (timezone) {
       clientTimezone = timezone;
@@ -214,7 +206,7 @@ export const login = async (req, res) => {
     }
 
     /* -----------------------------------------------------
-       3) CREATE NEW LOGIN ACTIVITY
+       3) CREATE NEW LOGIN ACTIVITY RECORD
     ----------------------------------------------------- */
     await UserActivity.create({
       userId: user._id,
@@ -232,7 +224,7 @@ export const login = async (req, res) => {
     });
 
     /* -----------------------------------------------------
-       4) NORMAL LOGIN RESPONSE
+       4) SEND RESPONSE
     ----------------------------------------------------- */
     return res.json({
       message: "Login successful",
@@ -256,11 +248,10 @@ export const login = async (req, res) => {
 };
 
 /* =========================================================
-   LOGOUT  ⭐ marks current session as offline
+   LOGOUT
 ========================================================= */
 export const logoutUser = async (req, res) => {
   try {
-    // req.user is set in AuthMiddleware.verifyToken
     await UserActivity.findOneAndUpdate(
       { userId: req.user.id, online: true },
       {
