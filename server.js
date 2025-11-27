@@ -27,8 +27,17 @@ const app = express();
 app.use(
   cors({
     origin: [
+      // LOCAL DEV
       "http://localhost:5173", // Admin (local)
       "http://localhost:5174", // Client (local)
+
+      // PRODUCTION DOMAINS
+      "https://www.nexverce.com",   // Client (main website)
+      "https://nexverce.com",       // (non-www redirect support)
+
+      "https://admin.nexverce.com", // Admin panel
+
+      // VERCEL PREVIEW DEPLOYMENTS (optional but recommended)
       "https://nexverce-admin.vercel.app",
       "https://nexverce-client.vercel.app",
     ],
