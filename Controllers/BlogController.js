@@ -1,7 +1,9 @@
 import Blog from "../Models/BlogModel.js";
 import { createNotification } from "./NotificationController.js";
 
-/* ----------------- helper: generate unique slug ----------------- */
+/* -------------------------------------------------------
+   HELPER: GENERATE UNIQUE SLUG
+------------------------------------------------------- */
 const generateSlug = async (title) => {
   let base = title
     .toLowerCase()
@@ -19,16 +21,17 @@ const generateSlug = async (title) => {
   return slug;
 };
 
-/* ----------------- CREATE BLOG ----------------- */
+/* -------------------------------------------------------
+   CREATE BLOG
+------------------------------------------------------- */
 export const createBlog = async (req, res) => {
   try {
     const data = req.body;
 
-    if (!data.title || !data.category) {
+    if (!data.title || !data.category)
       return res.status(400).json({ error: "Title and category are required" });
-    }
 
-    // parse blocks if sent as string
+    // parse editor blocks
     let { contentBlocks } = data;
     if (typeof contentBlocks === "string") {
       try {
@@ -39,12 +42,14 @@ export const createBlog = async (req, res) => {
     }
     if (!Array.isArray(contentBlocks)) contentBlocks = [];
 
+    // generate slug
     const slug = await generateSlug(data.title);
 
     const blog = await Blog.create({
       ...data,
       contentBlocks,
       slug,
+      image: data.image || data.featuredImage || "",
       createdBy: req.user._id,
     });
 
@@ -66,7 +71,9 @@ export const createBlog = async (req, res) => {
   }
 };
 
-/* ----------------- GET ALL BLOGS ----------------- */
+/* -------------------------------------------------------
+   GET ALL BLOGS
+------------------------------------------------------- */
 export const getAllBlogs = async (req, res) => {
   try {
     const blogs = await Blog.find().sort({ createdAt: -1 });
@@ -76,7 +83,9 @@ export const getAllBlogs = async (req, res) => {
   }
 };
 
-/* ----------------- GET SINGLE BLOG ----------------- */
+/* -------------------------------------------------------
+   GET SINGLE BLOG BY ID
+------------------------------------------------------- */
 export const getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -88,13 +97,15 @@ export const getBlogById = async (req, res) => {
   }
 };
 
-/* ----------------- UPDATE BLOG ----------------- */
+/* -------------------------------------------------------
+   UPDATE BLOG
+------------------------------------------------------- */
 export const updateBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: "Blog not found" });
 
-    // staff can edit only their blogs
+    // allow staff to edit only their own
     if (
       req.user.role === "staff" &&
       blog.createdBy.toString() !== req.user._id.toString()
@@ -104,6 +115,7 @@ export const updateBlog = async (req, res) => {
 
     let { contentBlocks, ...rest } = req.body;
 
+    // block parsing
     if (typeof contentBlocks === "string") {
       try {
         contentBlocks = JSON.parse(contentBlocks);
@@ -113,11 +125,12 @@ export const updateBlog = async (req, res) => {
     }
     if (!Array.isArray(contentBlocks)) contentBlocks = [];
 
-    // if title changed & no custom slug → regenerate slug
+    // regenerate slug only if: title changed AND no custom slug provided
     if (rest.title && !rest.slug) {
       rest.slug = await generateSlug(rest.title);
     }
 
+    // save update user
     rest.updatedBy = req.user._id;
 
     const updated = await Blog.findByIdAndUpdate(
@@ -144,13 +157,15 @@ export const updateBlog = async (req, res) => {
   }
 };
 
-/* ----------------- DELETE BLOG ----------------- */
+/* -------------------------------------------------------
+   DELETE BLOG
+------------------------------------------------------- */
 export const deleteBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: "Blog not found" });
 
-    // staff can delete only their blogs
+    // allow staff to delete only their own
     if (
       req.user.role === "staff" &&
       blog.createdBy.toString() !== req.user._id.toString()
@@ -178,7 +193,9 @@ export const deleteBlog = async (req, res) => {
   }
 };
 
-/* ----------------- TOGGLE STATUS (publish/draft) ----------------- */
+/* -------------------------------------------------------
+   CHANGE BLOG STATUS (PUBLISH / DRAFT)
+------------------------------------------------------- */
 export const changeBlogStatus = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -193,6 +210,7 @@ export const changeBlogStatus = async (req, res) => {
 
     blog.status =
       blog.status === "published" ? "draft" : "published";
+
     blog.updatedBy = req.user._id;
 
     await blog.save();
@@ -215,7 +233,9 @@ export const changeBlogStatus = async (req, res) => {
   }
 };
 
-/* ----------------- SCHEDULE BLOG ----------------- */
+/* -------------------------------------------------------
+   SCHEDULE BLOG
+------------------------------------------------------- */
 export const scheduleBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -227,6 +247,9 @@ export const scheduleBlog = async (req, res) => {
     ) {
       return res.status(403).json({ message: "Not allowed to schedule this blog" });
     }
+
+    if (!req.body.scheduledAt)
+      return res.status(400).json({ error: "scheduledAt is required" });
 
     blog.status = "scheduled";
     blog.scheduledAt = req.body.scheduledAt;

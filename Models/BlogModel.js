@@ -6,18 +6,15 @@ const blogSchema = new mongoose.Schema(
     title: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
 
-    // SHORT PREVIEW
+    // SHORT PREVIEW TEXT
     excerpt: { type: String, default: "" },
 
-    // CATEGORY & TAGS
+    // CATEGORY & TAGS / SEO KEYWORDS
     category: { type: String, required: true },
-    tags: {
-      type: [String],
-      default: [],
-    },
+    tags: { type: [String], default: [] },
 
-    // MAIN HERO IMAGE
-    featuredImage: { type: String, default: "" },
+    // HERO IMAGE
+    image: { type: String, default: "" },
 
     // BLOCK EDITOR CONTENT
     contentBlocks: {
@@ -25,7 +22,10 @@ const blogSchema = new mongoose.Schema(
       default: [],
     },
 
-    // TYPE FLAG
+    // READING TIME
+    readingTime: { type: String, default: "" },
+
+    // TYPE
     type: {
       type: String,
       enum: ["blog"],
@@ -49,7 +49,6 @@ const blogSchema = new mongoose.Schema(
     // SEO FIELDS
     metaTitle: { type: String, default: "" },
     metaDescription: { type: String, default: "" },
-    metaKeywords: { type: [String], default: [] },
 
     // AUTHOR INFO
     createdBy: {
