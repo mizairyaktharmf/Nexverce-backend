@@ -131,8 +131,19 @@ export const verifyEmail = async (req, res) => {
 ========================================================= */
 export const login = async (req, res) => {
   try {
-    // accept timezone from frontend
-    const { email, password, timezone } = req.body;
+    // accept geolocation and device data from frontend
+    const {
+      email,
+      password,
+      timezone,
+      city,
+      country,
+      countryCode,
+      region,
+      ip,
+      browser,
+      deviceType,
+    } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
@@ -171,39 +182,58 @@ export const login = async (req, res) => {
 
     /* -----------------------------------------------------
        2) COLLECT IP, LOCATION, DEVICE, TIMEZONE
+       - Prioritize frontend data (more accurate)
+       - Fallback to server-side detection
     ----------------------------------------------------- */
 
-    const ip =
+    // Get IP from frontend or server
+    const finalIp =
+      ip ||
       req.headers["x-forwarded-for"]?.split(",")[0] ||
       req.socket?.remoteAddress ||
       "Unknown";
 
-    const geo = ip ? geoip.lookup(ip) : null;
-    const rawCountryCode = geo?.country || "Unknown";
+    // Use frontend geolocation data if available, otherwise fallback to geoip
+    let finalCity = city || "Unknown";
+    let finalCountry = country || "Unknown";
+    let finalCountryCode = countryCode || "XX";
+    let finalRegion = region || "Unknown";
 
-    const country =
-      COUNTRY_NAMES[rawCountryCode] || rawCountryCode || "Unknown";
-
-    const city = geo?.city || "Unknown";
-
-    const parser = new UAParser(req.headers["user-agent"]);
-    const deviceInfo = parser.getResult();
-
-    const deviceType = deviceInfo.device.type || "Desktop";
-    const os = deviceInfo.os.name || "Unknown OS";
-    const browser = deviceInfo.browser.name || "Unknown Browser";
-
-    let clientTimezone = "Unknown";
-    if (timezone) {
-      clientTimezone = timezone;
-    } else {
-      try {
-        clientTimezone =
-          Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown";
-      } catch {
-        clientTimezone = "Unknown";
+    if (!city || !country) {
+      const geo = finalIp ? geoip.lookup(finalIp) : null;
+      if (geo) {
+        finalCity = finalCity === "Unknown" ? geo.city || "Unknown" : finalCity;
+        const rawCountryCode = geo.country || "XX";
+        finalCountry =
+          finalCountry === "Unknown"
+            ? COUNTRY_NAMES[rawCountryCode] || rawCountryCode || "Unknown"
+            : finalCountry;
+        finalCountryCode =
+          finalCountryCode === "XX" ? rawCountryCode : finalCountryCode;
       }
     }
+
+    // Use frontend device data if available, otherwise parse user-agent
+    let finalBrowser = browser || "Unknown";
+    let finalDeviceType = deviceType || "Desktop";
+    let finalOs = "Unknown";
+
+    if (!browser || !deviceType) {
+      const parser = new UAParser(req.headers["user-agent"]);
+      const deviceInfo = parser.getResult();
+      finalDeviceType =
+        finalDeviceType === "Desktop"
+          ? deviceInfo.device.type || "Desktop"
+          : finalDeviceType;
+      finalBrowser =
+        finalBrowser === "Unknown"
+          ? deviceInfo.browser.name || "Unknown"
+          : finalBrowser;
+      finalOs = deviceInfo.os.name || "Unknown";
+    }
+
+    // Use frontend timezone if available
+    const finalTimezone = timezone || "Unknown";
 
     /* -----------------------------------------------------
        3) CREATE NEW LOGIN ACTIVITY RECORD
@@ -214,13 +244,15 @@ export const login = async (req, res) => {
       logoutTime: null,
       lastSeen: new Date(),
       online: true,
-      ip,
-      country,
-      city,
-      deviceType,
-      os,
-      browser,
-      timezone: clientTimezone,
+      ip: finalIp,
+      city: finalCity,
+      country: finalCountry,
+      countryCode: finalCountryCode,
+      region: finalRegion,
+      timezone: finalTimezone,
+      browser: finalBrowser,
+      deviceType: finalDeviceType,
+      os: finalOs,
     });
 
     /* -----------------------------------------------------
@@ -252,18 +284,35 @@ export const login = async (req, res) => {
 ========================================================= */
 export const logoutUser = async (req, res) => {
   try {
-    await UserActivity.findOneAndUpdate(
-      { userId: req.user.id, online: true },
+    // Accept userId from request body or use authenticated user
+    const userId = req.body.userId || req.user.id;
+
+    const result = await UserActivity.findOneAndUpdate(
+      { userId: userId, online: true },
       {
         online: false,
         logoutTime: new Date(),
         lastSeen: new Date(),
-      }
+      },
+      { sort: { loginTime: -1 } } // Get most recent active session
     );
 
-    return res.json({ message: "Logout successful" });
+    if (result) {
+      return res.json({
+        success: true,
+        message: "Logout tracked successfully",
+      });
+    }
+
+    return res.json({
+      success: false,
+      message: "No active session found",
+    });
   } catch (error) {
     console.log("Logout Error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };

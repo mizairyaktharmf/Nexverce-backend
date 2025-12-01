@@ -29,25 +29,50 @@ const activitySchema = new mongoose.Schema(
     },
 
     // 🌍 LOCATION DETAILS
+    city: {
+      type: String,
+      default: "Unknown",
+    },
+
     country: {
       type: String,
       default: "Unknown",
     },
 
-    ipAddress: {
+    countryCode: {
       type: String,
-      default: "",
+      default: "XX",
     },
 
-    timezoneOffset: {
-      type: Number, // e.g. Dubai = +240, SL = +330
-      default: 0,
+    region: {
+      type: String,
+      default: "Unknown",
+    },
+
+    ip: {
+      type: String,
+      default: "Unknown",
+    },
+
+    timezone: {
+      type: String,
+      default: "Unknown",
     },
 
     // 💻 DEVICE DETAILS
-    deviceInfo: {
+    browser: {
       type: String,
-      default: "",
+      default: "Unknown",
+    },
+
+    deviceType: {
+      type: String,
+      default: "Unknown",
+    },
+
+    os: {
+      type: String,
+      default: "Unknown",
     },
   },
   { timestamps: true }

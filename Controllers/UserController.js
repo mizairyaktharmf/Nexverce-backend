@@ -71,7 +71,11 @@ export const getUserActivity = async (req, res) => {
     const { id } = req.params;
 
     const logs = await UserActivity.find({ userId: id })
-      .sort({ loginTime: -1 });
+      .sort({ loginTime: -1 })
+      .select(
+        "loginTime logoutTime timezone city country countryCode region ip browser deviceType os online lastSeen"
+      )
+      .limit(100); // Limit to last 100 sessions
 
     return res.json({ success: true, logs });
   } catch (err) {
