@@ -11,6 +11,7 @@ import authRoutes from "./Routes/AuthRoutes.js";
 import notificationRoutes from "./Routes/NotificationRoutes.js";
 import userRoutes from "./Routes/UserRoutes.js";
 import blogRoutes from "./Routes/BlogRoutes.js";   // ⭐ ADDED FOR BLOG SYSTEM
+import analyticsRoutes from "./Routes/AnalyticsRoutes.js"; // ⭐ ANALYTICS SYSTEM
 
 dotenv.config();
 
@@ -60,6 +61,7 @@ app.use("/api/blogs", blogRoutes);              // ⭐ BLOG ROUTES ADDED
 app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/analytics", analyticsRoutes);     // ⭐ ANALYTICS ROUTES
 
 /* ===========================================
    DEFAULT HOME ROUTE

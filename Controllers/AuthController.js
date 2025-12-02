@@ -145,6 +145,18 @@ export const login = async (req, res) => {
       deviceType,
     } = req.body;
 
+    // DEBUG: Log incoming data
+    console.log("🔍 Login Request Data:", {
+      timezone,
+      city,
+      country,
+      countryCode,
+      region,
+      ip,
+      browser,
+      deviceType,
+    });
+
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
     }
@@ -238,7 +250,7 @@ export const login = async (req, res) => {
     /* -----------------------------------------------------
        3) CREATE NEW LOGIN ACTIVITY RECORD
     ----------------------------------------------------- */
-    await UserActivity.create({
+    const activityData = {
       userId: user._id,
       loginTime: new Date(),
       logoutTime: null,
@@ -253,7 +265,11 @@ export const login = async (req, res) => {
       browser: finalBrowser,
       deviceType: finalDeviceType,
       os: finalOs,
-    });
+    };
+
+    console.log("💾 Saving Activity Data:", activityData);
+
+    await UserActivity.create(activityData);
 
     /* -----------------------------------------------------
        4) SEND RESPONSE
