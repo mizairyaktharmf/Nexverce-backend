@@ -12,6 +12,7 @@ import notificationRoutes from "./Routes/NotificationRoutes.js";
 import userRoutes from "./Routes/UserRoutes.js";
 import blogRoutes from "./Routes/BlogRoutes.js";   // ⭐ ADDED FOR BLOG SYSTEM
 import analyticsRoutes from "./Routes/AnalyticsRoutes.js"; // ⭐ ANALYTICS SYSTEM
+import landingPageRoutes from "./Routes/LandingPageRoutes.js"; // ⭐ LANDING PAGE SYSTEM
 
 dotenv.config();
 
@@ -62,6 +63,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/analytics", analyticsRoutes);     // ⭐ ANALYTICS ROUTES
+app.use("/api/landing-pages", landingPageRoutes); // ⭐ LANDING PAGE ROUTES
 
 /* ===========================================
    DEFAULT HOME ROUTE
