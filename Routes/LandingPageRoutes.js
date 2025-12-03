@@ -15,7 +15,7 @@ import {
   getLandingPagesByCategory,
 } from "../Controllers/LandingPageController.js";
 
-import { protect, restrictTo } from "../Middleware/authMiddleware.js";
+import { protect, restrictTo } from "../Middleware/AuthMiddleware.js";
 
 const router = express.Router();
 
