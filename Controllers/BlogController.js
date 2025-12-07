@@ -208,8 +208,12 @@ export const changeBlogStatus = async (req, res) => {
       return res.status(403).json({ message: "Not allowed to change status" });
     }
 
-    blog.status =
-      blog.status === "published" ? "draft" : "published";
+    // If status is provided in request body, use it; otherwise toggle
+    if (req.body.status) {
+      blog.status = req.body.status;
+    } else {
+      blog.status = blog.status === "published" ? "draft" : "published";
+    }
 
     blog.updatedBy = req.user._id;
 

@@ -15,7 +15,8 @@ import {
   getLandingPagesByCategory,
 } from "../Controllers/LandingPageController.js";
 
-import { protect, restrictTo } from "../Middleware/AuthMiddleware.js";
+import { verifyToken } from "../Middleware/AuthMiddleware.js";
+import { allowStaffOrAdmin } from "../Middleware/RoleMiddleware.js";
 
 const router = express.Router();
 
@@ -25,19 +26,16 @@ router.get("/category/:category", getLandingPagesByCategory);
 router.post("/:id/conversion", trackConversion);
 router.post("/:id/leads", submitLeadCapture);
 
-// Protected routes (authentication required)
-router.use(protect); // All routes below require authentication
+// Protected routes (authentication required for staff/admin)
+router.get("/", verifyToken, allowStaffOrAdmin, getAllLandingPages);
+router.post("/", verifyToken, allowStaffOrAdmin, createLandingPage);
 
-// Admin only routes
-router.get("/", restrictTo("admin", "superadmin"), getAllLandingPages);
-router.post("/", restrictTo("admin", "superadmin"), createLandingPage);
+router.get("/:id", verifyToken, allowStaffOrAdmin, getLandingPageById);
+router.put("/:id", verifyToken, allowStaffOrAdmin, updateLandingPage);
+router.patch("/:id", verifyToken, allowStaffOrAdmin, updateLandingPageStatus);
+router.delete("/:id", verifyToken, allowStaffOrAdmin, deleteLandingPage);
 
-router.get("/:id", restrictTo("admin", "superadmin"), getLandingPageById);
-router.put("/:id", restrictTo("admin", "superadmin"), updateLandingPage);
-router.delete("/:id", restrictTo("admin", "superadmin"), deleteLandingPage);
-
-router.patch("/:id/status", restrictTo("admin", "superadmin"), updateLandingPageStatus);
-router.get("/:id/analytics", restrictTo("admin", "superadmin"), getLandingPageAnalytics);
-router.post("/:id/duplicate", restrictTo("admin", "superadmin"), duplicateLandingPage);
+router.get("/:id/analytics", verifyToken, allowStaffOrAdmin, getLandingPageAnalytics);
+router.post("/:id/duplicate", verifyToken, allowStaffOrAdmin, duplicateLandingPage);
 
 export default router;
