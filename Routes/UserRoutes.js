@@ -11,21 +11,21 @@ import {
   deleteUser,
   getUserById,
   updateUserRole,
-  getUserActivity,     // ⭐ USER ACTIVITY LOGS
-  updatePresence,      // ⭐ ONLINE PRESENCE HEARTBEAT
+  getUserActivity,   // ⭐ VIEW SPECIFIC USER LOGIN HISTORY
+  updatePresence,    // ⭐ ONLINE HEARTBEAT
 } from "../Controllers/UserController.js";
 
 const router = express.Router();
 
 /* ======================================================
-   ⭐ PRESENCE HEARTBEAT (STAFF OR ADMIN)
-   UPDATE LAST SEEN + ONLINE STATUS
+   ⭐ ONLINE PRESENCE HEARTBEAT
+   STAFF + ADMIN CAN UPDATE LAST SEEN
 ====================================================== */
 router.post("/heartbeat", verifyToken, allowStaffOrAdmin, updatePresence);
 
 /* ======================================================
    ⭐ USER ACTIVITY LOGS (ADMIN ONLY)
-   — MUST COME BEFORE :id
+   MUST COME BEFORE "/:id" ROUTE
 ====================================================== */
 router.get("/activity/:id", verifyToken, allowAdmin, getUserActivity);
 

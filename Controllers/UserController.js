@@ -8,7 +8,8 @@ import UserActivity from "../Models/UserActivity.js"; // ⭐ ACTIVITY MODEL
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password -verificationCode");
-    return res.json({ users });
+    
+    return res.json(users);   // ✅ FIXED → return array directly
   } catch (err) {
     console.log("❌ Error fetching all users:", err);
     return res.status(500).json({ message: "Server error" });
@@ -23,7 +24,7 @@ export const getStaffUsers = async (req, res) => {
     const users = await User.find({ role: "staff" })
       .select("-password -verificationCode");
 
-    return res.json({ users });
+    return res.json(users);   // ✅ FIXED → return array directly
   } catch (err) {
     console.log("❌ Error fetching staff:", err);
     return res.status(500).json({ message: "Server error" });
@@ -40,7 +41,7 @@ export const getUserById = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    return res.json({ user });
+    return res.json(user);   // ✅ FIXED – no wrapper
   } catch (err) {
     console.log("❌ Error fetching user:", err);
     return res.status(500).json({ message: "Server error" });
@@ -56,7 +57,7 @@ export const getStaffActivity = async (req, res) => {
       .populate("userId", "firstName lastName email role profileImage")
       .sort({ loginTime: -1 });
 
-    return res.json({ activity });
+    return res.json(activity);   // ✅ FIXED
   } catch (err) {
     console.log("❌ Activity fetch error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -75,9 +76,9 @@ export const getUserActivity = async (req, res) => {
       .select(
         "loginTime logoutTime timezone city country countryCode region ip browser deviceType os online lastSeen"
       )
-      .limit(100); // Limit to last 100 sessions
+      .limit(100);
 
-    return res.json({ success: true, logs });
+    return res.json(logs);    // ✅ FIXED — return array only
   } catch (err) {
     console.log("❌ Activity fetch error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -97,10 +98,7 @@ export const updateProfile = async (req, res) => {
       { new: true }
     ).select("-password -verificationCode");
 
-    return res.json({
-      message: "Profile updated successfully",
-      user: updatedUser,
-    });
+    return res.json(updatedUser);  // ✅ FIXED
   } catch (err) {
     console.log("❌ Profile update error:", err);
     return res.status(500).json({ message: "Server failed" });
@@ -124,7 +122,7 @@ export const updateUserRole = async (req, res) => {
       { new: true }
     ).select("-password -verificationCode");
 
-    return res.json({ message: "Role updated", user: updated });
+    return res.json(updated);   // ✅ FIXED
   } catch (err) {
     console.log("❌ Role update error:", err);
     return res.status(500).json({ message: "Server failed" });
@@ -162,7 +160,6 @@ export const changePassword = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
-
     return res.json({ success: true });
   } catch (err) {
     console.log("❌ Delete failed:", err);
@@ -170,9 +167,9 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-/* =========================================================
+/* ============================================================
    UPDATE USER PRESENCE (HEARTBEAT)
-========================================================= */
+============================================================ */
 export const updatePresence = async (req, res) => {
   try {
     const userId = req.user.id;
