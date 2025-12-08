@@ -17,14 +17,16 @@ export const getAllUsers = async (req, res) => {
 };
 
 /* ============================================================
-   GET ONLY STAFF USERS
+   GET ALL STAFF AND ADMIN USERS
 ============================================================ */
 export const getStaffUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: "staff" })
-      .select("-password -verificationCode");
+    // Get ALL users (both staff and admin roles)
+    const users = await User.find({ role: { $in: ["staff", "admin"] } })
+      .select("-password -verificationCode")
+      .sort({ createdAt: -1 });
 
-    return res.json(users);   // ✅ FIXED → return array directly
+    return res.json({ users });  // Return wrapped in object for consistency
   } catch (err) {
     console.log("❌ Error fetching staff:", err);
     return res.status(500).json({ message: "Server error" });
