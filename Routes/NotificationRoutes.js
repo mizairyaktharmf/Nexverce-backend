@@ -1,6 +1,8 @@
 import express from "express";
 import {
   getNotifications,
+  getUserNotifications,
+  createNotificationAPI,
   markAsRead,
   markAllRead,
   deleteNotificationForUser,
@@ -12,7 +14,7 @@ import { allowStaffOrAdmin } from "../Middleware/RoleMiddleware.js";
 const router = express.Router();
 
 /* ======================================================
-   GET ALL NOTIFICATIONS FOR LOGGED-IN USER
+   GET ALL NOTIFICATIONS FOR LOGGED-IN USER (Legacy)
 ====================================================== */
 router.get(
   "/",
@@ -22,30 +24,50 @@ router.get(
 );
 
 /* ======================================================
-   MARK SINGLE NOTIFICATION READ
+   GET USER-SPECIFIC NOTIFICATIONS
+====================================================== */
+router.get(
+  "/user/:userId",
+  verifyToken,
+  allowStaffOrAdmin,
+  getUserNotifications
+);
+
+/* ======================================================
+   CREATE NOTIFICATION (Frontend can call this)
+====================================================== */
+router.post(
+  "/",
+  verifyToken,
+  allowStaffOrAdmin,
+  createNotificationAPI
+);
+
+/* ======================================================
+   MARK SINGLE NOTIFICATION READ (User-specific)
 ====================================================== */
 router.patch(
-  "/read/:id",
+  "/:id/read",
   verifyToken,
   allowStaffOrAdmin,
   markAsRead
 );
 
 /* ======================================================
-   MARK ALL NOTIFICATIONS READ
+   MARK ALL NOTIFICATIONS READ (User-specific)
 ====================================================== */
 router.patch(
-  "/read-all",
+  "/user/:userId/read-all",
   verifyToken,
   allowStaffOrAdmin,
   markAllRead
 );
 
 /* ======================================================
-   DELETE NOTIFICATION FOR THE USER ONLY
+   HIDE/DELETE NOTIFICATION FOR USER ONLY (Soft delete)
 ====================================================== */
-router.delete(
-  "/delete/:id",
+router.patch(
+  "/:id/hide",
   verifyToken,
   allowStaffOrAdmin,
   deleteNotificationForUser

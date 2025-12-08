@@ -10,9 +10,10 @@ export const createNotification = async ({
   target,
   recipientType = "all",
   recipientUserId = null,
+  io = null, // Optional Socket.IO instance for real-time updates
 }) => {
   try {
-    await Notification.create({
+    const newNotification = await Notification.create({
       message,
       type,
 
@@ -27,13 +28,24 @@ export const createNotification = async ({
       recipientType,
       recipientUserId,
     });
+
+    // Emit real-time notification to all connected users
+    if (io) {
+      io.emit("notification:new", {
+        ...newNotification.toObject(),
+        read: false,
+        user: newNotification.performedBy?.name || "System",
+      });
+    }
+
+    return newNotification;
   } catch (err) {
     console.error("❌ Notification create failed:", err.message);
   }
 };
 
 /* ============================================================
-   GET NOTIFICATIONS FOR CURRENT USER
+   GET NOTIFICATIONS FOR CURRENT USER (Legacy - kept for compatibility)
 ============================================================ */
 export const getNotifications = async (req, res) => {
   try {
@@ -47,7 +59,14 @@ export const getNotifications = async (req, res) => {
       ],
     }).sort({ createdAt: -1 });
 
-    return res.json(notes);
+    // Add read status for this user
+    const notesWithReadStatus = notes.map(note => ({
+      ...note.toObject(),
+      read: note.readBy.includes(userId),
+      user: note.performedBy?.name || "System", // Format for frontend
+    }));
+
+    return res.json(notesWithReadStatus);
   } catch (err) {
     console.log("❌ Get Notifications Error:", err);
     return res.status(500).json({ error: "Failed to fetch notifications" });
@@ -55,15 +74,93 @@ export const getNotifications = async (req, res) => {
 };
 
 /* ============================================================
-   MARK ONE NOTIFICATION AS READ
+   GET USER-SPECIFIC NOTIFICATIONS (New - for frontend)
+============================================================ */
+export const getUserNotifications = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Find all notifications NOT deleted by this user
+    const notes = await Notification.find({
+      deletedBy: { $ne: userId },
+      $or: [
+        { recipientType: "all" },
+        { recipientType: "specific", recipientUserId: userId },
+      ],
+    }).sort({ createdAt: -1 });
+
+    // Add read status for this specific user
+    const notesWithReadStatus = notes.map(note => ({
+      ...note.toObject(),
+      read: note.readBy.includes(userId), // true if user is in readBy array
+      user: note.performedBy?.name || "System", // Format for frontend
+    }));
+
+    return res.json(notesWithReadStatus);
+  } catch (err) {
+    console.log("❌ Get User Notifications Error:", err);
+    return res.status(500).json({ error: "Failed to fetch notifications" });
+  }
+};
+
+/* ============================================================
+   CREATE NOTIFICATION FROM FRONTEND
+============================================================ */
+export const createNotificationAPI = async (req, res) => {
+  try {
+    const { message, type = "info", user, userId } = req.body;
+
+    // Get user info from token
+    const currentUser = req.user;
+
+    const newNotification = await Notification.create({
+      message,
+      type,
+      performedBy: {
+        userId: userId || currentUser._id,
+        name: user || `${currentUser.firstName} ${currentUser.lastName}`,
+        role: currentUser.role,
+      },
+      recipientType: "all", // All users see it
+      readBy: [], // No one has read it yet
+      deletedBy: [], // No one has deleted it yet
+    });
+
+    // Emit real-time notification to all connected users
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("notification:new", {
+        ...newNotification.toObject(),
+        read: false,
+        user: newNotification.performedBy?.name || "System",
+      });
+    }
+
+    return res.json(newNotification);
+  } catch (err) {
+    console.log("❌ Create Notification Error:", err);
+    return res.status(500).json({ error: "Failed to create notification" });
+  }
+};
+
+/* ============================================================
+   MARK ONE NOTIFICATION AS READ (User-specific)
 ============================================================ */
 export const markAsRead = async (req, res) => {
   try {
-    const userId = req.user._id;
+    // Get userId from request body (sent from frontend)
+    const { userId } = req.body;
+    const userIdToUse = userId || req.user._id;
 
     await Notification.findByIdAndUpdate(req.params.id, {
-      $addToSet: { readBy: userId },
+      $addToSet: { readBy: userIdToUse },
     });
+
+    // Emit real-time update (only to the user who marked it as read)
+    const io = req.app.get("io");
+    if (io) {
+      io.to(userIdToUse.toString()).emit("notification:read", req.params.id);
+    }
 
     return res.json({ success: true });
   } catch (err) {
@@ -73,21 +170,23 @@ export const markAsRead = async (req, res) => {
 };
 
 /* ============================================================
-   MARK ALL AS READ
+   MARK ALL AS READ (User-specific)
 ============================================================ */
 export const markAllRead = async (req, res) => {
   try {
-    const userId = req.user._id;
+    // Get userId from URL params
+    const { userId } = req.params;
+    const userIdToUse = userId || req.user._id;
 
     await Notification.updateMany(
       {
-        deletedBy: { $ne: userId },
+        deletedBy: { $ne: userIdToUse },
         $or: [
           { recipientType: "all" },
-          { recipientType: "specific", recipientUserId: userId },
+          { recipientType: "specific", recipientUserId: userIdToUse },
         ],
       },
-      { $addToSet: { readBy: userId } }
+      { $addToSet: { readBy: userIdToUse } }
     );
 
     return res.json({ success: true });
@@ -98,15 +197,23 @@ export const markAllRead = async (req, res) => {
 };
 
 /* ============================================================
-   DELETE NOTIFICATION FOR CURRENT USER ONLY
+   HIDE/DELETE NOTIFICATION FOR USER ONLY (Soft delete)
 ============================================================ */
 export const deleteNotificationForUser = async (req, res) => {
   try {
-    const userId = req.user._id;
+    // Get userId from request body (sent from frontend)
+    const { userId } = req.body;
+    const userIdToUse = userId || req.user._id;
 
     await Notification.findByIdAndUpdate(req.params.id, {
-      $addToSet: { deletedBy: userId },
+      $addToSet: { deletedBy: userIdToUse },
     });
+
+    // Emit real-time update (only to the user who deleted it)
+    const io = req.app.get("io");
+    if (io) {
+      io.to(userIdToUse.toString()).emit("notification:delete", req.params.id);
+    }
 
     return res.json({ success: true });
   } catch (err) {

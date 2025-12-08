@@ -47,6 +47,7 @@ export const createPost = async (req, res) => {
         title: newPost.title,
         model: "Product",
       },
+      io: req.app.get("io"),
     });
 
     res.status(201).json(newPost);
@@ -116,6 +117,7 @@ export const updatePost = async (req, res) => {
         title: updated.title,
         model: "Product",
       },
+      io: req.app.get("io"),
     });
 
     res.json(updated);
@@ -151,6 +153,7 @@ export const deletePost = async (req, res) => {
         title: post.title,
         model: "Product",
       },
+      io: req.app.get("io"),
     });
 
     res.json({ success: true });
@@ -194,6 +197,7 @@ export const changeStatus = async (req, res) => {
         title: post.title,
         model: "Product",
       },
+      io: req.app.get("io"),
     });
 
     res.json(post);
@@ -232,6 +236,7 @@ export const schedulePost = async (req, res) => {
         title: post.title,
         model: "Product",
       },
+      io: req.app.get("io"),
     });
 
     res.json(post);

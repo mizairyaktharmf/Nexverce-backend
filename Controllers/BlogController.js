@@ -62,6 +62,7 @@ export const createBlog = async (req, res) => {
         title: blog.title,
         model: "Blog",
       },
+      io: req.app.get("io"),
     });
 
     res.status(201).json(blog);
@@ -148,6 +149,7 @@ export const updateBlog = async (req, res) => {
         title: updated.title,
         model: "Blog",
       },
+      io: req.app.get("io"),
     });
 
     res.json(updated);
@@ -184,6 +186,7 @@ export const deleteBlog = async (req, res) => {
         title: blog.title,
         model: "Blog",
       },
+      io: req.app.get("io"),
     });
 
     res.json({ success: true });
@@ -228,6 +231,7 @@ export const changeBlogStatus = async (req, res) => {
         title: blog.title,
         model: "Blog",
       },
+      io: req.app.get("io"),
     });
 
     res.json(blog);
@@ -270,6 +274,7 @@ export const scheduleBlog = async (req, res) => {
         title: blog.title,
         model: "Blog",
       },
+      io: req.app.get("io"),
     });
 
     res.json(blog);
