@@ -13,6 +13,12 @@ export const createNotification = async ({
   io = null, // Optional Socket.IO instance for real-time updates
 }) => {
   try {
+    // Validate required fields
+    if (!performedBy || !performedBy._id) {
+      console.error("❌ createNotification: performedBy is missing or invalid");
+      return null;
+    }
+
     const newNotification = await Notification.create({
       message,
       type,
@@ -29,6 +35,8 @@ export const createNotification = async ({
       recipientUserId,
     });
 
+    console.log(`📝 Notification created in DB: ${message}`);
+
     // Emit real-time notification to relevant users
     if (io) {
       const notificationData = {
@@ -40,17 +48,21 @@ export const createNotification = async ({
       if (recipientType === "specific" && recipientUserId) {
         // Emit only to specific user (e.g., profile updates)
         io.to(`user_${recipientUserId}`).emit("notification:new", notificationData);
+        console.log(`✅ Notification emitted to user_${recipientUserId}: ${message}`);
       } else {
         // Emit to all users (e.g., product/blog/landing page actions)
         io.emit("notification:new", notificationData);
+        console.log(`✅ Notification emitted to ALL users: ${message}`);
       }
-
-      console.log(`✅ Notification emitted [${recipientType}]: ${message}`);
+    } else {
+      console.warn(`⚠️ Socket.IO not available - notification created but not emitted: ${message}`);
     }
 
     return newNotification;
   } catch (err) {
     console.error("❌ Notification create failed:", err.message);
+    console.error("Stack:", err.stack);
+    return null;
   }
 };
 

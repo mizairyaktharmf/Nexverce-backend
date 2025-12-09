@@ -17,7 +17,10 @@ const notificationSchema = new mongoose.Schema(
         "scheduled",
         "update",
         "delete",
-        "profile-update", // profile update is only for sender
+        "profile",        // Profile updates
+        "active",         // Landing page active status
+        "paused",         // Landing page paused status
+        "ended",          // Landing page ended status
         "info",
       ],
       default: "info",
