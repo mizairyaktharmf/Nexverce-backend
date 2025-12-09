@@ -29,13 +29,23 @@ export const createNotification = async ({
       recipientUserId,
     });
 
-    // Emit real-time notification to all connected users
+    // Emit real-time notification to relevant users
     if (io) {
-      io.emit("notification:new", {
+      const notificationData = {
         ...newNotification.toObject(),
         read: false,
         user: newNotification.performedBy?.name || "System",
-      });
+      };
+
+      if (recipientType === "specific" && recipientUserId) {
+        // Emit only to specific user (e.g., profile updates)
+        io.to(`user_${recipientUserId}`).emit("notification:new", notificationData);
+      } else {
+        // Emit to all users (e.g., product/blog/landing page actions)
+        io.emit("notification:new", notificationData);
+      }
+
+      console.log(`✅ Notification emitted [${recipientType}]: ${message}`);
     }
 
     return newNotification;
