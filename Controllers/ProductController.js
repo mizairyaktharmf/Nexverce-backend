@@ -39,7 +39,7 @@ export const createPost = async (req, res) => {
     });
 
     await createNotification({
-      message: `Created new product`,
+      message: `created product "${newPost.title}" as ${newPost.status}`,
       type: newPost.status,
       performedBy: req.user,
       target: {
@@ -109,7 +109,7 @@ export const updatePost = async (req, res) => {
     );
 
     await createNotification({
-      message: `Product updated`,
+      message: `updated product "${updated.title}"`,
       type: "update",
       performedBy: req.user,
       target: {
@@ -145,7 +145,7 @@ export const deletePost = async (req, res) => {
     await post.deleteOne();
 
     await createNotification({
-      message: `Product deleted`,
+      message: `deleted product "${post.title}"`,
       type: "delete",
       performedBy: req.user,
       target: {
@@ -189,7 +189,7 @@ export const changeStatus = async (req, res) => {
     await post.save();
 
     await createNotification({
-      message: `Product marked as ${post.status}`,
+      message: `marked product "${post.title}" as ${post.status}`,
       type: post.status,
       performedBy: req.user,
       target: {
@@ -228,7 +228,7 @@ export const schedulePost = async (req, res) => {
     await post.save();
 
     await createNotification({
-      message: `Product scheduled`,
+      message: `scheduled product "${post.title}" for ${new Date(post.scheduledAt).toLocaleString()}`,
       type: "scheduled",
       performedBy: req.user,
       target: {

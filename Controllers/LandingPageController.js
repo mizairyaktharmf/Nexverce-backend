@@ -1,5 +1,6 @@
 // Controllers/LandingPageController.js
 import LandingPage from "../Models/LandingPageModel.js";
+import { createNotification } from "./NotificationController.js";
 
 // @desc    Get all landing pages
 // @route   GET /api/landing-pages
@@ -108,6 +109,18 @@ export const createLandingPage = async (req, res) => {
 
     const landingPage = await LandingPage.create(req.body);
 
+    await createNotification({
+      message: `created landing page "${landingPage.title}" as ${landingPage.status}`,
+      type: landingPage.status,
+      performedBy: req.user,
+      target: {
+        id: landingPage._id,
+        title: landingPage.title,
+        model: "LandingPage",
+      },
+      io: req.app.get("io"),
+    });
+
     res.status(201).json({
       success: true,
       message: "Landing page created successfully",
@@ -154,6 +167,18 @@ export const updateLandingPage = async (req, res) => {
       });
     }
 
+    await createNotification({
+      message: `updated landing page "${landingPage.title}"`,
+      type: "update",
+      performedBy: req.user,
+      target: {
+        id: landingPage._id,
+        title: landingPage.title,
+        model: "LandingPage",
+      },
+      io: req.app.get("io"),
+    });
+
     res.status(200).json({
       success: true,
       message: "Landing page updated successfully",
@@ -173,7 +198,7 @@ export const updateLandingPage = async (req, res) => {
 // @access  Private (Admin)
 export const deleteLandingPage = async (req, res) => {
   try {
-    const landingPage = await LandingPage.findByIdAndDelete(req.params.id);
+    const landingPage = await LandingPage.findById(req.params.id);
 
     if (!landingPage) {
       return res.status(404).json({
@@ -181,6 +206,21 @@ export const deleteLandingPage = async (req, res) => {
         message: "Landing page not found",
       });
     }
+
+    const pageTitle = landingPage.title;
+    await landingPage.deleteOne();
+
+    await createNotification({
+      message: `deleted landing page "${pageTitle}"`,
+      type: "delete",
+      performedBy: req.user,
+      target: {
+        id: landingPage._id,
+        title: pageTitle,
+        model: "LandingPage",
+      },
+      io: req.app.get("io"),
+    });
 
     res.status(200).json({
       success: true,
@@ -228,6 +268,18 @@ export const updateLandingPageStatus = async (req, res) => {
         message: "Landing page not found",
       });
     }
+
+    await createNotification({
+      message: `marked landing page "${landingPage.title}" as ${status}`,
+      type: status,
+      performedBy: req.user,
+      target: {
+        id: landingPage._id,
+        title: landingPage.title,
+        model: "LandingPage",
+      },
+      io: req.app.get("io"),
+    });
 
     res.status(200).json({
       success: true,

@@ -54,7 +54,7 @@ export const createBlog = async (req, res) => {
     });
 
     await createNotification({
-      message: `New blog created`,
+      message: `created blog "${blog.title}" as ${blog.status}`,
       type: blog.status,
       performedBy: req.user,
       target: {
@@ -141,7 +141,7 @@ export const updateBlog = async (req, res) => {
     );
 
     await createNotification({
-      message: `Blog updated`,
+      message: `updated blog "${updated.title}"`,
       type: "update",
       performedBy: req.user,
       target: {
@@ -178,7 +178,7 @@ export const deleteBlog = async (req, res) => {
     await blog.deleteOne();
 
     await createNotification({
-      message: `Blog deleted`,
+      message: `deleted blog "${blog.title}"`,
       type: "delete",
       performedBy: req.user,
       target: {
@@ -223,7 +223,7 @@ export const changeBlogStatus = async (req, res) => {
     await blog.save();
 
     await createNotification({
-      message: `Blog marked as ${blog.status}`,
+      message: `marked blog "${blog.title}" as ${blog.status}`,
       type: blog.status,
       performedBy: req.user,
       target: {
@@ -266,7 +266,7 @@ export const scheduleBlog = async (req, res) => {
     await blog.save();
 
     await createNotification({
-      message: `Blog scheduled`,
+      message: `scheduled blog "${blog.title}" for ${new Date(blog.scheduledAt).toLocaleString()}`,
       type: "scheduled",
       performedBy: req.user,
       target: {

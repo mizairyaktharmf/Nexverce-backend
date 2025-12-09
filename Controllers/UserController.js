@@ -1,6 +1,7 @@
 import User from "../Models/User.js";
 import bcrypt from "bcryptjs";
 import UserActivity from "../Models/UserActivity.js"; // ⭐ ACTIVITY MODEL
+import { createNotification } from "./NotificationController.js";
 
 /* ============================================================
    GET ALL USERS (ADMIN ONLY)
@@ -99,6 +100,21 @@ export const updateProfile = async (req, res) => {
       updates,
       { new: true }
     ).select("-password -verificationCode");
+
+    // Create personal notification only visible to this user
+    await createNotification({
+      message: `updated your profile`,
+      type: "profile",
+      performedBy: req.user,
+      target: {
+        id: updatedUser._id,
+        title: `${updatedUser.firstName} ${updatedUser.lastName}`,
+        model: "User",
+      },
+      recipientType: "specific",
+      recipientUserId: req.user.id,
+      io: req.app.get("io"),
+    });
 
     return res.json(updatedUser);  // ✅ FIXED
   } catch (err) {
