@@ -9,8 +9,8 @@ import { createNotification } from "./NotificationController.js";
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find().select("-password -verificationCode");
-    
-    return res.json(users);   // ✅ FIXED → return array directly
+
+    return res.json({ users });   // Return wrapped for consistency
   } catch (err) {
     console.log("❌ Error fetching all users:", err);
     return res.status(500).json({ message: "Server error" });
