@@ -36,6 +36,7 @@ export const getMyConversations = async (req, res) => {
       members: { $in: [userId] }
     })
       .populate("members", "firstName lastName role profileImage")
+      .populate("lastSender", "firstName lastName")
       .sort({ updatedAt: -1 });
 
     res.json(convos);
