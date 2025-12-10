@@ -303,6 +303,12 @@ export const logoutUser = async (req, res) => {
     // Accept userId from request body or use authenticated user
     const userId = req.body.userId || req.user.id;
 
+    // Update User model lastSeen to mark as offline (set to 10 mins ago)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    await User.findByIdAndUpdate(userId, {
+      lastSeen: tenMinutesAgo
+    });
+
     const result = await UserActivity.findOneAndUpdate(
       { userId: userId, online: true },
       {
