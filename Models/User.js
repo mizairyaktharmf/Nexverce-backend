@@ -61,6 +61,12 @@ const userSchema = new mongoose.Schema(
     verificationCode: {
       type: String,
     },
+
+    // Online presence tracking
+    lastSeen: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );

@@ -192,6 +192,12 @@ export const updatePresence = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // Update lastSeen in User model for online status
+    await User.findByIdAndUpdate(userId, {
+      lastSeen: new Date()
+    });
+
+    // Also update UserActivity
     await UserActivity.findOneAndUpdate(
       { userId, online: true },
       { lastSeen: new Date() }
