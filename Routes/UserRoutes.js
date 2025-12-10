@@ -40,6 +40,11 @@ router.get("/all", verifyToken, allowAdmin, getAllUsers);
 router.get("/staffs", verifyToken, allowAdmin, getStaffUsers);
 
 /* ======================================================
+   GET USERS FOR MESSAGING (STAFF + ADMIN)
+====================================================== */
+router.get("/messaging/users", verifyToken, allowStaffOrAdmin, getAllUsers);
+
+/* ======================================================
    GET SINGLE USER (ADMIN ONLY)
 ====================================================== */
 router.get("/:id", verifyToken, allowAdmin, getUserById);
