@@ -74,6 +74,23 @@ const activitySchema = new mongoose.Schema(
       type: String,
       default: "Unknown",
     },
+
+    // ⏰ LOGIN TIME VALIDATION
+    isEarlyLogin: {
+      type: Boolean,
+      default: false,
+    },
+
+    isLateLogin: {
+      type: Boolean,
+      default: false,
+    },
+
+    loginStatus: {
+      type: String,
+      enum: ["early", "late", "normal"],
+      default: "normal",
+    },
   },
   { timestamps: true }
 );

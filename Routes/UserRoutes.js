@@ -13,6 +13,7 @@ import {
   updateUserRole,
   getUserActivity,   // ⭐ VIEW SPECIFIC USER LOGIN HISTORY
   updatePresence,    // ⭐ ONLINE HEARTBEAT
+  getLoginStatistics, // ⭐ GET LOGIN STATS (EARLY/LATE)
 } from "../Controllers/UserController.js";
 
 const router = express.Router();
@@ -22,6 +23,12 @@ const router = express.Router();
    STAFF + ADMIN CAN UPDATE LAST SEEN
 ====================================================== */
 router.post("/heartbeat", verifyToken, allowStaffOrAdmin, updatePresence);
+
+/* ======================================================
+   ⭐ GET LOGIN STATISTICS (ADMIN ONLY)
+   EARLY/LATE LOGIN COUNTS FOR DASHBOARD
+====================================================== */
+router.get("/login-statistics", verifyToken, allowAdmin, getLoginStatistics);
 
 /* ======================================================
    ⭐ USER ACTIVITY LOGS (ADMIN ONLY)

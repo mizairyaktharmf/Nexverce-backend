@@ -143,6 +143,7 @@ export const login = async (req, res) => {
       ip,
       browser,
       deviceType,
+      loginTimeValidation,
     } = req.body;
 
     // DEBUG: Log incoming data
@@ -173,6 +174,33 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
+
+    /* -----------------------------------------------------
+       CHECK DAILY LOGIN LIMIT (1 login per day) - STAFF ONLY
+       ⚠️ Admins are exempt from this restriction
+    ----------------------------------------------------- */
+    if (user.role === "staff") {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Start of today
+
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+
+      const todayLoginCount = await UserActivity.countDocuments({
+        userId: user._id,
+        loginTime: {
+          $gte: today,
+          $lt: tomorrow,
+        },
+      });
+
+      if (todayLoginCount >= 1) {
+        return res.status(403).json({
+          message: "Daily login limit reached. You can only login once per day.",
+          loginLimitReached: true,
+        });
+      }
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -250,6 +278,9 @@ export const login = async (req, res) => {
     /* -----------------------------------------------------
        3) CREATE NEW LOGIN ACTIVITY RECORD
     ----------------------------------------------------- */
+    // Only track early/late login for staff, not admins
+    const isStaff = user.role === "staff";
+
     const activityData = {
       userId: user._id,
       loginTime: new Date(),
@@ -265,6 +296,16 @@ export const login = async (req, res) => {
       browser: finalBrowser,
       deviceType: finalDeviceType,
       os: finalOs,
+      // Login time validation (STAFF ONLY - admins exempt)
+      isEarlyLogin: isStaff ? (loginTimeValidation?.isEarly || false) : false,
+      isLateLogin: isStaff ? (loginTimeValidation?.isLate || false) : false,
+      loginStatus: isStaff
+        ? (loginTimeValidation?.isEarly
+            ? "early"
+            : loginTimeValidation?.isLate
+            ? "late"
+            : "normal")
+        : "normal",
     };
 
     console.log("💾 Saving Activity Data:", activityData);

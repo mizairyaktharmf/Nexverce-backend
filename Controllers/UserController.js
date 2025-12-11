@@ -209,3 +209,52 @@ export const updatePresence = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/* ============================================================
+   ⭐ GET LOGIN STATISTICS (EARLY/LATE LOGINS) - STAFF ONLY
+   ⚠️ Only counts staff logins, not admin logins
+============================================================ */
+export const getLoginStatistics = async (req, res) => {
+  try {
+    // Get today's date range
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Get all staff user IDs
+    const staffUsers = await User.find({ role: "staff" }).select("_id");
+    const staffUserIds = staffUsers.map((user) => user._id);
+
+    // Count early logins today (STAFF ONLY)
+    const earlyLoginCount = await UserActivity.countDocuments({
+      userId: { $in: staffUserIds },
+      loginTime: { $gte: today, $lt: tomorrow },
+      isEarlyLogin: true,
+    });
+
+    // Count late logins today (STAFF ONLY)
+    const lateLoginCount = await UserActivity.countDocuments({
+      userId: { $in: staffUserIds },
+      loginTime: { $gte: today, $lt: tomorrow },
+      isLateLogin: true,
+    });
+
+    // Get total staff login count today
+    const totalLoginCount = await UserActivity.countDocuments({
+      userId: { $in: staffUserIds },
+      loginTime: { $gte: today, $lt: tomorrow },
+    });
+
+    return res.json({
+      success: true,
+      earlyLoginCount,
+      lateLoginCount,
+      totalLoginCount,
+    });
+  } catch (err) {
+    console.log("❌ Login statistics error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
