@@ -25,10 +25,10 @@ const router = express.Router();
 router.post("/heartbeat", verifyToken, allowStaffOrAdmin, updatePresence);
 
 /* ======================================================
-   ⭐ GET LOGIN STATISTICS (ADMIN ONLY)
+   ⭐ GET LOGIN STATISTICS (STAFF + ADMIN)
    EARLY/LATE LOGIN COUNTS FOR DASHBOARD
 ====================================================== */
-router.get("/login-statistics", verifyToken, allowAdmin, getLoginStatistics);
+router.get("/login-statistics", verifyToken, allowStaffOrAdmin, getLoginStatistics);
 
 /* ======================================================
    ⭐ USER ACTIVITY LOGS (ADMIN ONLY)
@@ -37,9 +37,10 @@ router.get("/login-statistics", verifyToken, allowAdmin, getLoginStatistics);
 router.get("/activity/:id", verifyToken, allowAdmin, getUserActivity);
 
 /* ======================================================
-   GET ALL USERS (ADMIN ONLY)
+   GET ALL USERS (STAFF + ADMIN)
+   READ-ONLY ACCESS FOR DASHBOARD STATISTICS
 ====================================================== */
-router.get("/all", verifyToken, allowAdmin, getAllUsers);
+router.get("/all", verifyToken, allowStaffOrAdmin, getAllUsers);
 
 /* ======================================================
    GET ALL STAFF (ADMIN ONLY)
