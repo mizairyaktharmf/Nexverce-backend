@@ -227,31 +227,52 @@ export const getLoginStatistics = async (req, res) => {
     const staffUsers = await User.find({ role: "staff" }).select("_id");
     const staffUserIds = staffUsers.map((user) => user._id);
 
-    // Get early login staff with details
-    const earlyLoginStaff = await UserActivity.find({
+    // Get all today's login activities for staff
+    const allTodayActivities = await UserActivity.find({
       userId: { $in: staffUserIds },
       loginTime: { $gte: today, $lt: tomorrow },
-      isEarlyLogin: true,
     })
       .populate("userId", "firstName lastName email profileImage")
       .sort({ loginTime: 1 })
-      .select("loginTime logoutTime online");
+      .select("loginTime logoutTime online isEarlyLogin isLateLogin");
 
-    // Get late login staff with details
-    const lateLoginStaff = await UserActivity.find({
-      userId: { $in: staffUserIds },
-      loginTime: { $gte: today, $lt: tomorrow },
-      isLateLogin: true,
-    })
-      .populate("userId", "firstName lastName email profileImage")
-      .sort({ loginTime: 1 })
-      .select("loginTime logoutTime online");
+    // Helper to remove duplicate users (keep most recent login)
+    const getUniqueStaff = (activities) => {
+      const uniqueMap = new Map();
+      activities.forEach((activity) => {
+        const userId = activity.userId?._id?.toString();
+        if (userId && !uniqueMap.has(userId)) {
+          uniqueMap.set(userId, activity);
+        }
+      });
+      return Array.from(uniqueMap.values());
+    };
 
-    // Get total staff login count today
-    const totalLoginCount = await UserActivity.countDocuments({
-      userId: { $in: staffUserIds },
-      loginTime: { $gte: today, $lt: tomorrow },
+    // Get early login staff (unique users)
+    const earlyActivities = allTodayActivities.filter((a) => a.isEarlyLogin);
+    const uniqueEarlyStaff = getUniqueStaff(earlyActivities);
+    console.log("📊 Early login activities:", earlyActivities.length, "Unique:", uniqueEarlyStaff.length);
+
+    // Get late login staff (unique users)
+    const lateActivities = allTodayActivities.filter((a) => a.isLateLogin);
+    const uniqueLateStaff = getUniqueStaff(lateActivities);
+    console.log("📊 Late login activities:", lateActivities.length, "Unique:", uniqueLateStaff.length);
+
+    // Get staff who logged out after 6 PM
+    const sixPMToday = new Date(today);
+    sixPMToday.setHours(18, 0, 0, 0);
+
+    const loggedOutAfter6PM = allTodayActivities.filter((activity) => {
+      return (
+        activity.logoutTime &&
+        new Date(activity.logoutTime) >= sixPMToday &&
+        new Date(activity.logoutTime) < tomorrow
+      );
     });
+    const uniqueLoggedOutStaff = getUniqueStaff(loggedOutAfter6PM);
+
+    // Get unique total staff who logged in today
+    const uniqueTotalStaff = getUniqueStaff(allTodayActivities);
 
     // Format the staff data
     const formatStaffData = (activities) => {
@@ -266,14 +287,21 @@ export const getLoginStatistics = async (req, res) => {
       }));
     };
 
-    return res.json({
+    const responseData = {
       success: true,
-      earlyLoginCount: earlyLoginStaff.length,
-      lateLoginCount: lateLoginStaff.length,
-      totalLoginCount,
-      earlyLoginStaff: formatStaffData(earlyLoginStaff),
-      lateLoginStaff: formatStaffData(lateLoginStaff),
-    });
+      totalLoginCount: uniqueTotalStaff.length,
+      earlyLoginCount: uniqueEarlyStaff.length,
+      lateLoginCount: uniqueLateStaff.length,
+      loggedOutAfter6PMCount: uniqueLoggedOutStaff.length,
+      totalLoginStaff: formatStaffData(uniqueTotalStaff),
+      earlyLoginStaff: formatStaffData(uniqueEarlyStaff),
+      lateLoginStaff: formatStaffData(uniqueLateStaff),
+      loggedOutAfter6PMStaff: formatStaffData(uniqueLoggedOutStaff),
+    };
+
+    console.log("✅ Sending response - Early staff:", responseData.earlyLoginStaff.length, "Late staff:", responseData.lateLoginStaff.length);
+
+    return res.json(responseData);
   } catch (err) {
     console.log("❌ Login statistics error:", err);
     return res.status(500).json({ message: "Server error" });
