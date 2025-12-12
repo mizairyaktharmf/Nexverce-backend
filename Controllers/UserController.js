@@ -227,19 +227,25 @@ export const getLoginStatistics = async (req, res) => {
     const staffUsers = await User.find({ role: "staff" }).select("_id");
     const staffUserIds = staffUsers.map((user) => user._id);
 
-    // Count early logins today (STAFF ONLY)
-    const earlyLoginCount = await UserActivity.countDocuments({
+    // Get early login staff with details
+    const earlyLoginStaff = await UserActivity.find({
       userId: { $in: staffUserIds },
       loginTime: { $gte: today, $lt: tomorrow },
       isEarlyLogin: true,
-    });
+    })
+      .populate("userId", "firstName lastName email profileImage")
+      .sort({ loginTime: 1 })
+      .select("loginTime logoutTime online");
 
-    // Count late logins today (STAFF ONLY)
-    const lateLoginCount = await UserActivity.countDocuments({
+    // Get late login staff with details
+    const lateLoginStaff = await UserActivity.find({
       userId: { $in: staffUserIds },
       loginTime: { $gte: today, $lt: tomorrow },
       isLateLogin: true,
-    });
+    })
+      .populate("userId", "firstName lastName email profileImage")
+      .sort({ loginTime: 1 })
+      .select("loginTime logoutTime online");
 
     // Get total staff login count today
     const totalLoginCount = await UserActivity.countDocuments({
@@ -247,11 +253,26 @@ export const getLoginStatistics = async (req, res) => {
       loginTime: { $gte: today, $lt: tomorrow },
     });
 
+    // Format the staff data
+    const formatStaffData = (activities) => {
+      return activities.map((activity) => ({
+        _id: activity.userId?._id,
+        name: `${activity.userId?.firstName || ""} ${activity.userId?.lastName || ""}`.trim() || "Unknown",
+        email: activity.userId?.email || "No email",
+        profileImage: activity.userId?.profileImage,
+        loginTime: activity.loginTime,
+        logoutTime: activity.logoutTime,
+        online: activity.online,
+      }));
+    };
+
     return res.json({
       success: true,
-      earlyLoginCount,
-      lateLoginCount,
+      earlyLoginCount: earlyLoginStaff.length,
+      lateLoginCount: lateLoginStaff.length,
       totalLoginCount,
+      earlyLoginStaff: formatStaffData(earlyLoginStaff),
+      lateLoginStaff: formatStaffData(lateLoginStaff),
     });
   } catch (err) {
     console.log("❌ Login statistics error:", err);
