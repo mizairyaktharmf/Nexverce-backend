@@ -1,6 +1,7 @@
 import Analytics from "../Models/Analytics.js";
 import Product from "../Models/ProductModel.js";
 import UserActivity from "../Models/UserActivity.js";
+import User from "../Models/User.js";
 
 /* ===================================================================
    📊 ANALYTICS CONTROLLER - Dashboard & Post Analytics
@@ -114,17 +115,24 @@ export const getDashboardStats = async (req, res) => {
       if (post) topTrending.push(post.title);
     }
 
-    // 👥 STAFF INSIGHTS (from UserActivity)
-    const newStaffToday = await UserActivity.countDocuments({
-      loginTime: { $gte: todayStart },
-    });
+    // 👥 STAFF INSIGHTS (from UserActivity) - Count UNIQUE users only
+    const staffUsers = await User.find({ role: "staff" }).select("_id");
+    const staffUserIds = staffUsers.map((user) => user._id);
 
-    const earlyLoginStaff = await UserActivity.countDocuments({
-      loginTime: {
-        $gte: new Date(todayStart.getTime() + 6 * 60 * 60 * 1000), // After 6 AM
-        $lte: new Date(todayStart.getTime() + 9 * 60 * 60 * 1000), // Before 9 AM
-      },
-    });
+    // Get unique staff who logged in today
+    const todayActivities = await UserActivity.find({
+      userId: { $in: staffUserIds },
+      loginTime: { $gte: todayStart },
+    }).distinct("userId");
+    const newStaffToday = todayActivities.length;
+
+    // Get unique staff who logged in early (8:30-9 AM)
+    const earlyLoginActivities = await UserActivity.find({
+      userId: { $in: staffUserIds },
+      isEarlyLogin: true,
+      loginTime: { $gte: todayStart },
+    }).distinct("userId");
+    const earlyLoginStaff = earlyLoginActivities.length;
 
     // 📅 SCHEDULED POSTS (from Product model)
     const scheduledToday = await Product.countDocuments({
