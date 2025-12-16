@@ -18,7 +18,7 @@ export const getAllUsers = async (req, res) => {
 };
 
 /* ============================================================
-   GET ALL STAFF AND ADMIN USERS
+   GET ALL STAFF AND ADMIN USERS WITH LOGIN/LOGOUT TIMES
 ============================================================ */
 export const getStaffUsers = async (req, res) => {
   try {
@@ -27,7 +27,25 @@ export const getStaffUsers = async (req, res) => {
       .select("-password -verificationCode")
       .sort({ createdAt: -1 });
 
-    return res.json({ users });  // Return wrapped in object for consistency
+    // For each user, get their latest activity (login/logout times)
+    const usersWithActivity = await Promise.all(
+      users.map(async (user) => {
+        // Get the latest activity record for this user
+        const latestActivity = await UserActivity.findOne({ userId: user._id })
+          .sort({ loginTime: -1 })
+          .select("loginTime logoutTime online")
+          .lean();
+
+        return {
+          ...user.toObject(),
+          lastLoginAt: latestActivity?.loginTime || null,
+          lastLogoutAt: latestActivity?.logoutTime || null,
+          isOnline: latestActivity?.online || false,
+        };
+      })
+    );
+
+    return res.json({ users: usersWithActivity });  // Return with activity data
   } catch (err) {
     console.log("❌ Error fetching staff:", err);
     return res.status(500).json({ message: "Server error" });
