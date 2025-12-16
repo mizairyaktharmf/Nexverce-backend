@@ -88,12 +88,13 @@ async function syncAllLinkedInAnalytics() {
 
 /**
  * Start the cron job
- * Runs every 6 hours: "0 */6 * * *" (at minute 0 of every 6th hour)
+ * Runs every 6 hours at minute 0
  */
 export function startAnalyticsSyncCron() {
   console.log("🕒 Starting LinkedIn analytics sync job (runs every 6 hours)");
 
-  const job = cron.schedule("0 */6 * * *", async () => {
+  const cronExpression = "0 */6 * * *";
+  const job = cron.schedule(cronExpression, async () => {
     await syncAllLinkedInAnalytics();
   });
 

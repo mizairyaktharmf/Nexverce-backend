@@ -1,9 +1,16 @@
 import OpenAI from "openai";
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialize OpenAI (only when needed)
+let openai = null;
+
+function getOpenAI() {
+  if (!openai && process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 /**
  * Generate LinkedIn caption using AI
@@ -34,11 +41,18 @@ export async function generateLinkedInCaption(post, postType, userSettings = {})
       return createFallbackCaption(title, excerpt, targetUrl, hashtags, userSettings);
     }
 
+    // Get OpenAI client
+    const ai = getOpenAI();
+    if (!ai) {
+      console.warn("⚠️ OpenAI API key not configured, using fallback caption");
+      return createFallbackCaption(title, excerpt, targetUrl, hashtags, userSettings);
+    }
+
     // Build AI prompt
     const prompt = buildAIPrompt(title, excerpt, category, postType, userSettings);
 
     // Call OpenAI API
-    const response = await openai.chat.completions.create({
+    const response = await ai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
