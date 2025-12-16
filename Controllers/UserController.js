@@ -197,11 +197,28 @@ export const deleteUser = async (req, res) => {
   try {
     const userId = req.params.id;
 
+    // Get user info before deletion for socket notification
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     // Delete user from User collection
     await User.findByIdAndDelete(userId);
 
     // Also delete all their activity records
     await UserActivity.deleteMany({ userId });
+
+    // Emit socket event to force logout the user in real-time
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("account:removed", {
+        userId: userId,
+        message: "Your account has been removed by the administrator",
+      });
+    }
+
+    console.log(`✅ User ${user.email} deleted successfully and logged out in real-time`);
 
     return res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
@@ -239,6 +256,19 @@ export const suspendUser = async (req, res) => {
 
     await user.save();
 
+    // If suspending, emit socket event to force logout the user in real-time
+    if (user.suspended) {
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("account:suspended", {
+          userId: userId,
+          reason: reason || "No reason provided",
+          message: `Your account has been suspended. Reason: ${reason || "No reason provided"}`,
+        });
+      }
+      console.log(`✅ User ${user.email} suspended and logged out in real-time`);
+    }
+
     return res.json({
       success: true,
       message: user.suspended ? "User suspended successfully" : "User unsuspended successfully",
@@ -272,6 +302,15 @@ export const forceLogout = async (req, res) => {
         lastSeen: new Date()
       }
     );
+
+    // Emit socket event to force logout the user in real-time
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("account:force-logout", {
+        userId: userId,
+        message: "You have been logged out by the administrator",
+      });
+    }
 
     console.log(`✅ Force logged out user ${user.email}, updated ${result.modifiedCount} activity records`);
 
