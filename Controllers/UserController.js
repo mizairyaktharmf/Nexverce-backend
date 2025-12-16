@@ -195,10 +195,93 @@ export const changePassword = async (req, res) => {
 ============================================================ */
 export const deleteUser = async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
-    return res.json({ success: true });
+    const userId = req.params.id;
+
+    // Delete user from User collection
+    await User.findByIdAndDelete(userId);
+
+    // Also delete all their activity records
+    await UserActivity.deleteMany({ userId });
+
+    return res.json({ success: true, message: "User deleted successfully" });
   } catch (err) {
     console.log("❌ Delete failed:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ============================================================
+   SUSPEND/UNSUSPEND USER (ADMIN)
+============================================================ */
+export const suspendUser = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { reason } = req.body;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Toggle suspended status
+    user.suspended = !user.suspended;
+
+    // If suspending, save the reason
+    if (user.suspended && reason) {
+      user.suspendedReason = reason;
+      user.suspendedAt = new Date();
+    } else if (!user.suspended) {
+      // If unsuspending, clear the reason
+      user.suspendedReason = undefined;
+      user.suspendedAt = undefined;
+    }
+
+    await user.save();
+
+    return res.json({
+      success: true,
+      message: user.suspended ? "User suspended successfully" : "User unsuspended successfully",
+      suspended: user.suspended
+    });
+  } catch (err) {
+    console.log("❌ Suspend/unsuspend failed:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ============================================================
+   FORCE LOGOUT USER (ADMIN)
+============================================================ */
+export const forceLogout = async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update all online activity records to offline with logout time
+    const result = await UserActivity.updateMany(
+      { userId, online: true },
+      {
+        online: false,
+        logoutTime: new Date(),
+        lastSeen: new Date()
+      }
+    );
+
+    console.log(`✅ Force logged out user ${user.email}, updated ${result.modifiedCount} activity records`);
+
+    return res.json({
+      success: true,
+      message: "User logged out successfully",
+      modifiedCount: result.modifiedCount
+    });
+  } catch (err) {
+    console.log("❌ Force logout failed:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

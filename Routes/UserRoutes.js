@@ -14,6 +14,8 @@ import {
   getUserActivity,   // ⭐ VIEW SPECIFIC USER LOGIN HISTORY
   updatePresence,    // ⭐ ONLINE HEARTBEAT
   getLoginStatistics, // ⭐ GET LOGIN STATS (EARLY/LATE)
+  suspendUser,       // ⭐ SUSPEND/UNSUSPEND USER
+  forceLogout,       // ⭐ FORCE LOGOUT USER
 } from "../Controllers/UserController.js";
 
 const router = express.Router();
@@ -61,6 +63,16 @@ router.get("/:id", verifyToken, allowAdmin, getUserById);
    UPDATE USER ROLE (ADMIN ONLY)
 ====================================================== */
 router.put("/:id/role", verifyToken, allowAdmin, updateUserRole);
+
+/* ======================================================
+   SUSPEND/UNSUSPEND USER (ADMIN ONLY)
+====================================================== */
+router.put("/suspend/:id", verifyToken, allowAdmin, suspendUser);
+
+/* ======================================================
+   FORCE LOGOUT USER (ADMIN ONLY)
+====================================================== */
+router.post("/force-logout/:id", verifyToken, allowAdmin, forceLogout);
 
 /* ======================================================
    DELETE USER (ADMIN ONLY)
