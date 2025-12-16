@@ -23,6 +23,12 @@ import blogRoutes from "./Routes/BlogRoutes.js";
 import analyticsRoutes from "./Routes/AnalyticsRoutes.js";
 import landingPageRoutes from "./Routes/LandingPageRoutes.js";
 import messageRoutes from "./Routes/MessageRoutes.js";
+import linkedinRoutes from "./Routes/LinkedInRoutes.js";
+
+// CRON JOBS
+import { startScheduledPosterCron } from "./Jobs/LinkedInScheduledPoster.js";
+import { startAnalyticsSyncCron } from "./Jobs/LinkedInAnalyticsSync.js";
+import { startTokenRefresherCron } from "./Jobs/LinkedInTokenRefresher.js";
 
 dotenv.config();
 
@@ -270,6 +276,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/landing-pages", landingPageRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/linkedin", linkedinRoutes);
 
 /* ============================================================
    DEFAULT HOME ROUTE
@@ -296,10 +303,19 @@ app.use((err, req, res, next) => {
 });
 
 /* ============================================================
+   START CRON JOBS
+============================================================ */
+startScheduledPosterCron(io); // Posts scheduled LinkedIn posts every minute
+startAnalyticsSyncCron(); // Syncs LinkedIn analytics every 6 hours
+startTokenRefresherCron(); // Refreshes expiring LinkedIn tokens daily
+
+/* ============================================================
    START SERVER
 ============================================================ */
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
   console.log(`🚀 Nexverce backend running with Socket.io on port ${PORT}`);
+  console.log(`✅ LinkedIn routes registered at /api/linkedin`);
+  console.log(`✅ LinkedIn cron jobs started`);
 });
