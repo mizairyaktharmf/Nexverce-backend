@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: nexverce-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: EMAIL_FROM
+        value: nexverce@gmail.com
+      - key: RESEND_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LINKEDIN_CLIENT_ID
+        value: 8686hpv54l95y6
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_REDIRECT_URI
+        value: https://nexverce-backend.onrender.com/api/linkedin/callback
+      - key: BACKEND_URL
+        value: https://nexverce-backend.onrender.com
+      - key: FRONTEND_URL
+        value: https://nexverce-admin.onrender.com
