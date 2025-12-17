@@ -1,4 +1,4 @@
-//  Config/MangoDb.js 
+// Config/MangoDb.js 
 import mongoose from "mongoose";
 
 const connectDB = async () => {
