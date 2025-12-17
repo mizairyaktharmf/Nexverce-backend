@@ -8,6 +8,7 @@ import {
 import {
   getAllUsers,
   getStaffUsers,
+  createStaff,       // ⭐ CREATE STAFF USER
   deleteUser,
   getUserById,
   updateUserRole,
@@ -48,6 +49,11 @@ router.get("/all", verifyToken, allowStaffOrAdmin, getAllUsers);
    GET ALL STAFF (ADMIN ONLY)
 ====================================================== */
 router.get("/staffs", verifyToken, allowAdmin, getStaffUsers);
+
+/* ======================================================
+   CREATE STAFF USER (ADMIN ONLY)
+====================================================== */
+router.post("/create-staff", verifyToken, allowAdmin, createStaff);
 
 /* ======================================================
    GET USERS FOR MESSAGING (STAFF + ADMIN)

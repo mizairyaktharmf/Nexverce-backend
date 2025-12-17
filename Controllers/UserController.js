@@ -53,6 +53,83 @@ export const getStaffUsers = async (req, res) => {
 };
 
 /* ============================================================
+   CREATE STAFF USER (ADMIN ONLY)
+============================================================ */
+export const createStaff = async (req, res) => {
+  try {
+    const { email, role = "staff" } = req.body;
+
+    // Validate email domain
+    if (!email || !email.endsWith("@nexverce.com")) {
+      return res.status(400).json({
+        success: false,
+        message: "Only @nexverce.com emails are allowed"
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User with this email already exists"
+      });
+    }
+
+    // Validate role
+    if (!["staff", "admin"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role. Must be 'staff' or 'admin'"
+      });
+    }
+
+    // Generate default password (user can change later)
+    const defaultPassword = "Nexverce@123";
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    // Create new user
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      role,
+      verified: true, // Staff accounts are pre-verified
+      firstName: email.split("@")[0], // Use email prefix as default name
+      lastName: "Staff"
+    });
+
+    await newUser.save();
+
+    // Create notification
+    await createNotification(
+      `New ${role} account created: ${email}`,
+      "create",
+      `${req.user.firstName} ${req.user.lastName} (admin)`
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: `${role.charAt(0).toUpperCase() + role.slice(1)} account created successfully`,
+      user: {
+        _id: newUser._id,
+        email: newUser.email,
+        role: newUser.role,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        verified: newUser.verified,
+        createdAt: newUser.createdAt
+      }
+    });
+  } catch (err) {
+    console.log("❌ Create staff error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create staff account"
+    });
+  }
+};
+
+/* ============================================================
    GET SINGLE USER (ADMIN OR SELF)
 ============================================================ */
 export const getUserById = async (req, res) => {
