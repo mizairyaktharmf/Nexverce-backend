@@ -29,7 +29,7 @@ router.post("/click", trackClick);
 // 📊 GET POST ANALYTICS (Protected - Admin only)
 router.get("/post/:postId", verifyToken, getPostAnalytics);
 
-// 🔥 GET TRENDING POSTS (Protected - Admin only)
+// 🔥 GET TRENDING POSTS (Protected - admin only)
 router.get("/trending", verifyToken, getTrendingPosts);
 
 export default router;
