@@ -206,6 +206,7 @@ export const createLinkedInPost = async (req, res) => {
 async function postToLinkedInNow(socialPost, socialAccount, io) {
   try {
     console.log(`📤 Posting to LinkedIn: ${socialPost.caption.substring(0, 50)}...`);
+    console.log(`🔑 LinkedIn User ID: ${socialAccount.linkedinUserId}`);
 
     // Build LinkedIn API payload (REST API v2)
     const payload = {
@@ -220,6 +221,8 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
       lifecycleState: "PUBLISHED",
       isReshareDisabledByAuthor: false,
     };
+
+    console.log(`📦 Payload:`, JSON.stringify(payload, null, 2));
 
     // Add content (article with image)
     if (socialPost.imageUrl) {
