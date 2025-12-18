@@ -126,12 +126,25 @@ export const createLinkedInPost = async (req, res) => {
     }
 
     // Build target URL with UTM tracking
-    // Point to nexverce-client preview page where full content is displayed
+    // Point to nexverce-client where full content is displayed
     const clientBaseUrl = process.env.CLIENT_URL || "https://nexverce-client.onrender.com";
-    const baseUrl = `${clientBaseUrl}/preview?id=${postId}&type=${postType}`;
+
+    // Build correct URL based on post type
+    let baseUrl;
+    if (postType === "blog" || postType === "product") {
+      // For blogs and products, use /post/:id format
+      baseUrl = `${clientBaseUrl}/post/${postId}`;
+    } else if (postType === "landingpage") {
+      // For landing pages, use /lp/:slug format
+      baseUrl = `${clientBaseUrl}/lp/${post.slug}`;
+    } else {
+      // Fallback
+      baseUrl = `${clientBaseUrl}/post/${postId}`;
+    }
+
     const targetUrl = settings
       ? settings.buildTrackingUrl(baseUrl)
-      : `${baseUrl}&utm_source=linkedin&utm_medium=social&utm_campaign=autopost`;
+      : `${baseUrl}?utm_source=linkedin&utm_medium=social&utm_campaign=autopost`;
 
     // Create social post record
     const socialPost = await SocialPost.create({
