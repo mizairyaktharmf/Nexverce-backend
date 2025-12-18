@@ -241,7 +241,6 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
       headers: {
         Authorization: `Bearer ${socialAccount.accessToken}`,
         "Content-Type": "application/json",
-        "LinkedIn-Version": "202405",
         "X-Restli-Protocol-Version": "2.0.0",
       },
     });
@@ -537,7 +536,6 @@ async function syncSinglePostAnalytics(socialPost, socialAccount) {
       {
         headers: {
           Authorization: `Bearer ${socialAccount.accessToken}`,
-          "LinkedIn-Version": "202405",
           "X-Restli-Protocol-Version": "2.0.0",
         },
       }
