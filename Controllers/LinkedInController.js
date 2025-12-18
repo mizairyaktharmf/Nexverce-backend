@@ -28,8 +28,8 @@ export const initiateLinkedInAuth = async (req, res) => {
       })
     ).toString("base64");
 
-    // LinkedIn OAuth scopes needed
-    const scope = "openid profile email w_member_social";
+    // LinkedIn OAuth scopes needed (member + organization posting)
+    const scope = "openid profile email w_member_social w_organization_social";
 
     // Build authorization URL
     const authUrl =
@@ -120,6 +120,34 @@ export const handleLinkedInCallback = async (req, res) => {
 
     const linkedinUser = userInfoResponse.data;
 
+    // Try to fetch organizations the user can post to (if w_organization_social scope granted)
+    let organizationId = null;
+    try {
+      const orgsResponse = await axios.get(
+        "https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&projection=(elements*(organization~(localizedName),roleAssignee,state))",
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "X-Restli-Protocol-Version": "2.0.0",
+          },
+        }
+      );
+
+      // Find first organization where user has ADMINISTRATOR role
+      const adminOrg = orgsResponse.data.elements?.find(
+        (org) => org.roleAssignee && org.state === "APPROVED"
+      );
+
+      if (adminOrg && adminOrg.organization) {
+        // Extract organization ID from URN (urn:li:organization:123456)
+        const orgUrn = adminOrg.organization;
+        organizationId = orgUrn.split(":").pop();
+        console.log(`✅ Found organization: ${organizationId}`);
+      }
+    } catch (orgError) {
+      console.log("⚠️ Could not fetch organizations (may not have permission):", orgError.message);
+    }
+
     // Check if account already exists
     const existingAccount = await SocialAccount.findOne({
       userId: userId,
@@ -139,7 +167,9 @@ export const handleLinkedInCallback = async (req, res) => {
       existingAccount.profileImageUrl = linkedinUser.picture;
       existingAccount.isActive = true;
       existingAccount.lastSyncedAt = new Date();
-      existingAccount.scopes = ["openid", "profile", "email", "w_member_social"];
+      existingAccount.scopes = ["openid", "profile", "email", "w_member_social", "w_organization_social"];
+      existingAccount.linkedinOrgId = organizationId;
+      existingAccount.accountType = organizationId ? "company" : "personal";
       existingAccount.lastError = undefined;
       existingAccount.errorCount = 0;
 
@@ -150,17 +180,18 @@ export const handleLinkedInCallback = async (req, res) => {
       socialAccount = await SocialAccount.create({
         userId: userId,
         platform: "linkedin",
-        accountType: "personal",
+        accountType: organizationId ? "company" : "personal",
         accessToken: access_token,
         refreshToken: refresh_token,
         expiresAt: expiresAt,
         linkedinUserId: linkedinUser.sub,
+        linkedinOrgId: organizationId,
         accountName: linkedinUser.name,
         accountEmail: linkedinUser.email,
         profileImageUrl: linkedinUser.picture,
         isActive: true,
         lastSyncedAt: new Date(),
-        scopes: ["openid", "profile", "email", "w_member_social"],
+        scopes: ["openid", "profile", "email", "w_member_social", "w_organization_social"],
       });
 
       console.log(`✅ New LinkedIn account connected: ${linkedinUser.email}`);

@@ -209,8 +209,13 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
     console.log(`🔑 LinkedIn User ID: ${socialAccount.linkedinUserId}`);
 
     // Build LinkedIn UGC Post payload (official v2 API format)
+    // Support both personal and organization posting
+    const authorUrn = socialAccount.accountType === "company" && socialAccount.linkedinOrgId
+      ? `urn:li:organization:${socialAccount.linkedinOrgId}`
+      : `urn:li:person:${socialAccount.linkedinUserId}`;
+
     const payload = {
-      author: `urn:li:person:${socialAccount.linkedinUserId}`,
+      author: authorUrn,
       lifecycleState: "PUBLISHED",
       specificContent: {
         "com.linkedin.ugc.ShareContent": {
