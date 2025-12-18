@@ -24,6 +24,7 @@ import analyticsRoutes from "./Routes/AnalyticsRoutes.js";
 import landingPageRoutes from "./Routes/LandingPageRoutes.js";
 import messageRoutes from "./Routes/MessageRoutes.js";
 import linkedinRoutes from "./Routes/LinkedInRoutes.js";
+import universalPostRoutes from "./Routes/UniversalPostRoutes.js";
 
 // CRON JOBS
 import { startScheduledPosterCron } from "./Jobs/LinkedInScheduledPoster.js";
@@ -268,6 +269,10 @@ app.use(express.urlencoded({ extended: true }));
 /* ============================================================
    REGISTER ROUTES
 ============================================================ */
+// ✅ UNIVERSAL POST ENDPOINT (Must be registered FIRST before specific routes)
+app.use("/api/posts", universalPostRoutes);
+
+// Specific endpoints
 app.use("/api/products", productRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/auth", authRoutes);
