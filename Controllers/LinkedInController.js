@@ -122,30 +122,50 @@ export const handleLinkedInCallback = async (req, res) => {
 
     // Try to fetch organizations the user can post to (if w_organization_social scope granted)
     let organizationId = null;
+    let organizationName = null;
     try {
       const orgsResponse = await axios.get(
-        "https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&projection=(elements*(organization~(localizedName),roleAssignee,state))",
+        "https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED",
         {
           headers: {
             Authorization: `Bearer ${access_token}`,
             "X-Restli-Protocol-Version": "2.0.0",
+            "LinkedIn-Version": "202501",
           },
         }
       );
 
-      // Find first organization where user has ADMINISTRATOR role
-      const adminOrg = orgsResponse.data.elements?.find(
-        (org) => org.roleAssignee && org.state === "APPROVED"
-      );
+      console.log(`📋 Organizations response:`, JSON.stringify(orgsResponse.data, null, 2));
+
+      // Find first organization where user has ADMINISTRATOR role and APPROVED state
+      const adminOrg = orgsResponse.data.elements?.[0];
 
       if (adminOrg && adminOrg.organization) {
         // Extract organization ID from URN (urn:li:organization:123456)
         const orgUrn = adminOrg.organization;
         organizationId = orgUrn.split(":").pop();
-        console.log(`✅ Found organization: ${organizationId}`);
+
+        // Try to fetch organization name
+        try {
+          const orgDetailsResponse = await axios.get(
+            `https://api.linkedin.com/rest/organizations/${organizationId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${access_token}`,
+                "X-Restli-Protocol-Version": "2.0.0",
+                "LinkedIn-Version": "202501",
+              },
+            }
+          );
+          organizationName = orgDetailsResponse.data.localizedName || null;
+        } catch (nameError) {
+          console.log("⚠️ Could not fetch organization name:", nameError.message);
+        }
+
+        console.log(`✅ Found organization: ${organizationId} (${organizationName || "Unknown"})`);
       }
     } catch (orgError) {
-      console.log("⚠️ Could not fetch organizations (may not have permission):", orgError.message);
+      console.log("⚠️ Could not fetch organizations (may not have permission):", orgError.response?.data || orgError.message);
     }
 
     // Check if account already exists
@@ -162,7 +182,7 @@ export const handleLinkedInCallback = async (req, res) => {
       existingAccount.accessToken = access_token;
       existingAccount.refreshToken = refresh_token || existingAccount.refreshToken;
       existingAccount.expiresAt = expiresAt;
-      existingAccount.accountName = linkedinUser.name;
+      existingAccount.accountName = organizationId && organizationName ? organizationName : linkedinUser.name;
       existingAccount.accountEmail = linkedinUser.email;
       existingAccount.profileImageUrl = linkedinUser.picture;
       existingAccount.isActive = true;
@@ -186,7 +206,7 @@ export const handleLinkedInCallback = async (req, res) => {
         expiresAt: expiresAt,
         linkedinUserId: linkedinUser.sub,
         linkedinOrgId: organizationId,
-        accountName: linkedinUser.name,
+        accountName: organizationId && organizationName ? organizationName : linkedinUser.name,
         accountEmail: linkedinUser.email,
         profileImageUrl: linkedinUser.picture,
         isActive: true,

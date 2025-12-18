@@ -9,8 +9,8 @@ import { refreshTokenIfNeeded } from "./LinkedInController.js";
 import { createNotification } from "./NotificationController.js";
 import axios from "axios";
 
-// LinkedIn API URLs (v2)
-const LINKEDIN_POST_API = "https://api.linkedin.com/v2/ugcPosts";
+// LinkedIn API URLs (REST API 2023+)
+const LINKEDIN_POST_API = "https://api.linkedin.com/rest/posts";
 const LINKEDIN_ANALYTICS_API = "https://api.linkedin.com/v2/organizationalEntityShareStatistics";
 
 /**
@@ -208,7 +208,7 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
     console.log(`📤 Posting to LinkedIn: ${socialPost.caption.substring(0, 50)}...`);
     console.log(`🔑 LinkedIn User ID: ${socialAccount.linkedinUserId}`);
 
-    // Build LinkedIn UGC Post payload (official v2 API format)
+    // Build LinkedIn REST API Post payload (2023+ format)
     // Support both personal and organization posting
     const authorUrn = socialAccount.accountType === "company" && socialAccount.linkedinOrgId
       ? `urn:li:organization:${socialAccount.linkedinOrgId}`
@@ -216,34 +216,26 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
 
     const payload = {
       author: authorUrn,
+      commentary: socialPost.caption,
+      visibility: "PUBLIC",
+      distribution: {
+        feedDistribution: "MAIN_FEED",
+        targetEntities: [],
+        thirdPartyDistributionChannels: [],
+      },
       lifecycleState: "PUBLISHED",
-      specificContent: {
-        "com.linkedin.ugc.ShareContent": {
-          shareCommentary: {
-            text: socialPost.caption,
-          },
-          shareMediaCategory: socialPost.imageUrl ? "ARTICLE" : "NONE",
-        },
-      },
-      visibility: {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC",
-      },
+      isReshareDisabledByAuthor: false,
     };
 
-    // Add article link if image exists
+    // Add article link if image and URL exist
     if (socialPost.imageUrl && socialPost.targetUrl) {
-      payload.specificContent["com.linkedin.ugc.ShareContent"].media = [
-        {
-          status: "READY",
-          description: {
-            text: socialPost.rawCaption || socialPost.caption.substring(0, 200),
-          },
-          originalUrl: socialPost.targetUrl,
-          title: {
-            text: "Check out this post on Nexverce",
-          },
+      payload.content = {
+        article: {
+          source: socialPost.targetUrl,
+          title: "Check out this post on Nexverce",
+          description: socialPost.rawCaption || socialPost.caption.substring(0, 200),
         },
-      ];
+      };
     }
 
     console.log(`📦 Payload:`, JSON.stringify(payload, null, 2));
@@ -254,10 +246,12 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
         Authorization: `Bearer ${socialAccount.accessToken}`,
         "Content-Type": "application/json",
         "X-Restli-Protocol-Version": "2.0.0",
+        "LinkedIn-Version": "202501",
       },
     });
 
-    const linkedinPostId = response.data.id;
+    // Extract post ID from response header (x-restli-id) or body
+    const linkedinPostId = response.headers["x-restli-id"] || response.data.id;
 
     // Mark as posted
     await socialPost.markAsPosted({
