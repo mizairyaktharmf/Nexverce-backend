@@ -214,9 +214,15 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
       ? `urn:li:organization:${socialAccount.linkedinOrgId}`
       : `urn:li:person:${socialAccount.linkedinUserId}`;
 
+    // Build caption with link at the end
+    let fullCommentary = socialPost.caption;
+    if (socialPost.targetUrl) {
+      fullCommentary += `\n\n🔗 Read more: ${socialPost.targetUrl}`;
+    }
+
     const payload = {
       author: authorUrn,
-      commentary: socialPost.caption,
+      commentary: fullCommentary,
       visibility: "PUBLIC",
       distribution: {
         feedDistribution: "MAIN_FEED",
@@ -227,15 +233,64 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
       isReshareDisabledByAuthor: false,
     };
 
-    // Add article link if image and URL exist
-    if (socialPost.imageUrl && socialPost.targetUrl) {
-      payload.content = {
-        article: {
-          source: socialPost.targetUrl,
-          title: "Check out this post on Nexverce",
-          description: socialPost.rawCaption || socialPost.caption.substring(0, 200),
-        },
-      };
+    // If there's an image, upload it to LinkedIn and attach as media (full image post)
+    if (socialPost.imageUrl) {
+      try {
+        console.log(`📸 Uploading image to LinkedIn: ${socialPost.imageUrl}`);
+
+        // Step 1: Initialize image upload
+        const initUploadResponse = await axios.post(
+          "https://api.linkedin.com/rest/images?action=initializeUpload",
+          {
+            initializeUploadRequest: {
+              owner: authorUrn,
+            },
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${socialAccount.accessToken}`,
+              "Content-Type": "application/json",
+              "X-Restli-Protocol-Version": "2.0.0",
+              "LinkedIn-Version": "202501",
+            },
+          }
+        );
+
+        const { uploadUrl, image: imageUrn } = initUploadResponse.data.value;
+        console.log(`✅ Image URN obtained: ${imageUrn}`);
+
+        // Step 2: Download image from Nexverce
+        const imageResponse = await axios.get(socialPost.imageUrl, {
+          responseType: "arraybuffer",
+        });
+
+        // Step 3: Upload image to LinkedIn's upload URL
+        await axios.put(uploadUrl, imageResponse.data, {
+          headers: {
+            "Content-Type": imageResponse.headers["content-type"] || "image/jpeg",
+          },
+        });
+
+        console.log(`✅ Image uploaded successfully`);
+
+        // Step 4: Attach image to post payload
+        payload.content = {
+          media: {
+            altText: socialPost.rawCaption || post.title || "Nexverce post image",
+            id: imageUrn,
+          },
+        };
+      } catch (imageError) {
+        console.error("❌ Image upload failed:", imageError.response?.data || imageError.message);
+        // Fallback to article format if image upload fails
+        if (socialPost.targetUrl) {
+          payload.content = {
+            article: {
+              source: socialPost.targetUrl,
+            },
+          };
+        }
+      }
     }
 
     console.log(`📦 Payload:`, JSON.stringify(payload, null, 2));
