@@ -202,6 +202,7 @@ export const getConnectedAccounts = async (req, res) => {
     const accounts = await SocialAccount.find({
       userId: userId,
       platform: "linkedin",
+      isActive: true, // Only return active accounts
     }).select("-accessToken -refreshToken"); // Hide sensitive tokens
 
     // Add token expiry status
@@ -247,11 +248,10 @@ export const disconnectLinkedInAccount = async (req, res) => {
       });
     }
 
-    // Soft delete - mark as inactive instead of deleting
-    account.isActive = false;
-    await account.save();
+    // Hard delete - completely remove the account
+    await account.deleteOne();
 
-    console.log(`🔌 LinkedIn account disconnected: ${account.accountEmail}`);
+    console.log(`🔌 LinkedIn account deleted: ${account.accountEmail}`);
 
     return res.json({
       success: true,
