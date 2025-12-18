@@ -166,7 +166,7 @@ export const createLinkedInPost = async (req, res) => {
 
     // If mode is "now", post immediately
     if (mode === "now") {
-      await postToLinkedInNow(socialPost, socialAccount, req.app.get("io"));
+      await postToLinkedInNow(socialPost, socialAccount, req.app.get("io"), post);
     }
 
     // Create notification
@@ -203,7 +203,7 @@ export const createLinkedInPost = async (req, res) => {
 /**
  * Post to LinkedIn API (Core Function)
  */
-async function postToLinkedInNow(socialPost, socialAccount, io) {
+async function postToLinkedInNow(socialPost, socialAccount, io, originalPost = null) {
   try {
     console.log(`📤 Posting to LinkedIn: ${socialPost.caption.substring(0, 50)}...`);
     console.log(`🔑 LinkedIn User ID: ${socialAccount.linkedinUserId}`);
@@ -276,7 +276,7 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
         // Step 4: Attach image to post payload
         payload.content = {
           media: {
-            altText: socialPost.rawCaption || post.title || "Nexverce post image",
+            altText: originalPost?.title || socialPost.rawCaption || "Nexverce post image",
             id: imageUrn,
           },
         };
@@ -287,6 +287,8 @@ async function postToLinkedInNow(socialPost, socialAccount, io) {
           payload.content = {
             article: {
               source: socialPost.targetUrl,
+              title: originalPost?.title || "Check out this post on Nexverce",
+              description: socialPost.rawCaption || socialPost.caption.substring(0, 200),
             },
           };
         }
@@ -510,13 +512,27 @@ export const retryFailedPost = async (req, res) => {
     // Refresh token if needed
     await refreshTokenIfNeeded(post.socialAccountId);
 
+    // Fetch original Nexverce post for metadata
+    let originalPost = null;
+    try {
+      if (post.nexvercePostType === "product") {
+        originalPost = await Product.findById(post.nexvercePostId);
+      } else if (post.nexvercePostType === "blog") {
+        originalPost = await Blog.findById(post.nexvercePostId);
+      } else if (post.nexvercePostType === "landingpage") {
+        originalPost = await LandingPage.findById(post.nexvercePostId);
+      }
+    } catch (fetchError) {
+      console.log("⚠️ Could not fetch original post:", fetchError.message);
+    }
+
     // Reset status to posting
     post.status = "posting";
     post.errorMessage = undefined;
     await post.save();
 
     // Retry posting
-    await postToLinkedInNow(post, post.socialAccountId, req.app.get("io"));
+    await postToLinkedInNow(post, post.socialAccountId, req.app.get("io"), originalPost);
 
     console.log(`🔄 LinkedIn post retry initiated: ${post._id}`);
 
