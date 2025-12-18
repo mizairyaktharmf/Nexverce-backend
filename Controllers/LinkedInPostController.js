@@ -68,21 +68,6 @@ export const createLinkedInPost = async (req, res) => {
       });
     }
 
-    // Check if already posted
-    const existingPost = await SocialPost.findOne({
-      nexvercePostId: postId,
-      platform: "linkedin",
-      status: { $in: ["posted", "scheduled", "posting"] },
-    });
-
-    if (existingPost) {
-      return res.status(400).json({
-        success: false,
-        message: "This content has already been posted or scheduled for LinkedIn",
-        existingPostId: existingPost._id,
-      });
-    }
-
     // Get LinkedIn account
     let socialAccount;
     if (accountId) {
@@ -127,22 +112,26 @@ export const createLinkedInPost = async (req, res) => {
 
     // Generate caption (or use custom caption)
     let captionData;
-    if (customCaption) {
+    if (customCaption && customCaption.trim()) {
+      // Use custom caption provided by user
       captionData = {
-        caption: customCaption,
+        caption: customCaption.trim(),
         hashtags: [],
-        rawCaption: customCaption,
+        rawCaption: customCaption.trim(),
         metadata: { generatedByAI: false, custom: true },
       };
     } else {
+      // Only generate AI caption if no custom caption provided
       captionData = await generateLinkedInCaption(post, postType, settings);
     }
 
     // Build target URL with UTM tracking
-    const baseUrl = `https://nexverce.com/${postType}/${post.slug}`;
+    // Point to nexverce-client preview page where full content is displayed
+    const clientBaseUrl = process.env.CLIENT_URL || "https://nexverce-client.onrender.com";
+    const baseUrl = `${clientBaseUrl}/preview?id=${postId}&type=${postType}`;
     const targetUrl = settings
       ? settings.buildTrackingUrl(baseUrl)
-      : `${baseUrl}?utm_source=linkedin&utm_medium=social&utm_campaign=autopost`;
+      : `${baseUrl}&utm_source=linkedin&utm_medium=social&utm_campaign=autopost`;
 
     // Create social post record
     const socialPost = await SocialPost.create({
@@ -214,9 +203,10 @@ async function postToLinkedInNow(socialPost, socialAccount, io, originalPost = n
       ? `urn:li:organization:${socialAccount.linkedinOrgId}`
       : `urn:li:person:${socialAccount.linkedinUserId}`;
 
-    // Build caption with link at the end
+    // Build caption with link at the end (only if not already in caption)
     let fullCommentary = socialPost.caption;
-    if (socialPost.targetUrl) {
+    if (socialPost.targetUrl && !socialPost.caption.includes(socialPost.targetUrl)) {
+      // Only add link if user hasn't already included it in their caption
       fullCommentary += `\n\n🔗 Read more: ${socialPost.targetUrl}`;
     }
 
