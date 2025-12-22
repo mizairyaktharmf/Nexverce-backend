@@ -23,6 +23,23 @@ const router = express.Router();
 // Public routes (no authentication required)
 router.get("/slug/:slug", getLandingPageBySlug);
 router.get("/category/:category", getLandingPagesByCategory);
+router.get("/careers/all", async (req, res) => {
+  try {
+    const LandingPage = (await import("../Models/LandingPageModel.js")).default;
+    const careers = await LandingPage.find({
+      category: "Career",
+      status: "active"
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(careers);
+  } catch (error) {
+    console.error("Error fetching careers:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch career posts"
+    });
+  }
+});
 router.post("/:id/conversion", trackConversion);
 router.post("/:id/leads", submitLeadCapture);
 

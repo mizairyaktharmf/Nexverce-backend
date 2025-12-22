@@ -19,7 +19,7 @@ const landingPageSchema = new mongoose.Schema(
     category: {
       type: String,
       required: [true, "Category is required"],
-      enum: ["Marketing", "Education", "Finance", "Technology", "Health", "Lifestyle", "Other"],
+      enum: ["Marketing", "Education", "Finance", "Technology", "Health", "Lifestyle", "Career", "Other"],
     },
 
     // SEO & Meta Data
