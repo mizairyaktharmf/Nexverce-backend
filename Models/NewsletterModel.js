@@ -18,7 +18,7 @@ const newsletterSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["website", "landing-page", "blog", "manual"],
+      enum: ["website", "landing-page", "blog", "footer", "manual"],
       default: "website",
     },
     subscribedAt: {
