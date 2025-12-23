@@ -8,8 +8,8 @@ import {
   deleteSubscriber,
   exportSubscribers,
 } from "../Controllers/NewsletterController.js";
-import { verifyToken } from "../Middlewares/verifyToken.js";
-import { allowAdmin } from "../Middlewares/allowAdmin.js";
+import { verifyToken } from "../Middleware/AuthMiddleware.js";
+import { allowAdmin } from "../Middleware/RoleMiddleware.js";
 
 const router = express.Router();
 
