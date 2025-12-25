@@ -313,10 +313,22 @@ async function postToLinkedInNow(socialPost, socialAccount, io, originalPost = n
     // Extract post ID from response header (x-restli-id) or body
     const linkedinPostId = response.headers["x-restli-id"] || response.data.id;
 
+    // Format LinkedIn post URL properly
+    // LinkedIn post IDs are in format: urn:li:share:7XXXXXXXXXXXXXXXXXX or urn:li:ugcPost:7XXXXXXXXXXXXXXXXXX
+    // Extract the actual ID number from the URN
+    let postIdForUrl = linkedinPostId;
+    if (linkedinPostId.includes("urn:li:")) {
+      // Extract the ID after the last colon
+      postIdForUrl = linkedinPostId.split(":").pop();
+    }
+
+    // Build the correct LinkedIn post URL
+    const linkedinPostUrl = `https://www.linkedin.com/feed/update/urn:li:share:${postIdForUrl}/`;
+
     // Mark as posted
     await socialPost.markAsPosted({
       postId: linkedinPostId,
-      postUrl: `https://www.linkedin.com/feed/update/${linkedinPostId}`,
+      postUrl: linkedinPostUrl,
     });
 
     console.log(`✅ Successfully posted to LinkedIn: ${linkedinPostId}`);
