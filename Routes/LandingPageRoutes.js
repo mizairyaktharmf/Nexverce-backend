@@ -50,6 +50,7 @@ router.post("/", verifyToken, allowStaffOrAdmin, createLandingPage);
 router.get("/:id", verifyToken, allowStaffOrAdmin, getLandingPageById);
 router.put("/:id", verifyToken, allowStaffOrAdmin, updateLandingPage);
 router.patch("/:id", verifyToken, allowStaffOrAdmin, updateLandingPageStatus);
+router.patch("/:id/status", verifyToken, allowStaffOrAdmin, updateLandingPageStatus); // Add /status endpoint
 router.delete("/:id", verifyToken, allowStaffOrAdmin, deleteLandingPage);
 
 router.get("/:id/analytics", verifyToken, allowStaffOrAdmin, getLandingPageAnalytics);
