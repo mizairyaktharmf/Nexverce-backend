@@ -12,8 +12,6 @@ import connectDB from "./Config/MangoDb.js";
 
 // MODELS
 import User from "./Models/User.js";
-import Conversation from "./Models/Conversation.js";
-import Message from "./Models/Message.js";
 
 // ROUTES
 import productRoutes from "./Routes/ProductRoutes.js";
@@ -23,7 +21,7 @@ import userRoutes from "./Routes/UserRoutes.js";
 import blogRoutes from "./Routes/BlogRoutes.js";
 import analyticsRoutes from "./Routes/AnalyticsRoutes.js";
 import landingPageRoutes from "./Routes/LandingPageRoutes.js";
-import messageRoutes from "./Routes/MessageRoutes.js";
+import taskRoutes from "./Routes/TaskRoutes.js";
 import linkedinRoutes from "./Routes/LinkedInRoutes.js";
 import universalPostRoutes from "./Routes/UniversalPostRoutes.js";
 import newsletterRoutes from "./Routes/NewsletterRoutes.js";
@@ -282,7 +280,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/landing-pages", landingPageRoutes);
-app.use("/api/messages", messageRoutes);
+app.use("/api/tasks", taskRoutes);
 app.use("/api/linkedin", linkedinRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 
