@@ -126,13 +126,16 @@ export const createLinkedInPost = async (req, res) => {
     }
 
     // Build target URL with UTM tracking
-    // Point to nexverce-client where full content is displayed
-    const clientBaseUrl = process.env.CLIENT_URL || "https://nexverce-client.onrender.com";
+    // Point to nexverce.com where full content is displayed
+    const clientBaseUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || "https://www.nexverce.com";
 
     // Build correct URL based on post type
     let baseUrl;
-    if (postType === "blog" || postType === "product") {
-      // For blogs and products, use /post/:id format
+    if (postType === "blog") {
+      // For blogs, use /blog/:slug format (SEO-friendly)
+      baseUrl = `${clientBaseUrl}/blog/${post.slug}`;
+    } else if (postType === "product") {
+      // For products, use /post/:id format
       baseUrl = `${clientBaseUrl}/post/${postId}`;
     } else if (postType === "landingpage") {
       // For landing pages, use /lp/:slug format
