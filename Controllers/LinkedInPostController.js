@@ -446,8 +446,9 @@ export const getLinkedInPostById = async (req, res) => {
 };
 
 /**
- * Delete LinkedIn Post (Only draft/scheduled)
+ * Delete LinkedIn Post
  * DELETE /api/linkedin/posts/:id
+ * Allows deletion of any LinkedIn post record for analytics cleanup
  */
 export const deleteLinkedInPost = async (req, res) => {
   try {
@@ -466,21 +467,15 @@ export const deleteLinkedInPost = async (req, res) => {
       });
     }
 
-    // Only allow deletion of draft or scheduled posts
-    if (post.status === "posted") {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot delete a post that has already been published to LinkedIn",
-      });
-    }
-
+    // Allow deletion of any post (draft, scheduled, posted, failed)
+    // This helps with analytics cleanup and database maintenance
     await post.deleteOne();
 
-    console.log(`🗑️ LinkedIn post deleted: ${post._id}`);
+    console.log(`🗑️ LinkedIn post deleted: ${post._id} (status: ${post.status})`);
 
     return res.json({
       success: true,
-      message: "LinkedIn post deleted successfully",
+      message: "LinkedIn post record deleted successfully",
     });
   } catch (error) {
     console.error("❌ Error deleting LinkedIn post:", error);
