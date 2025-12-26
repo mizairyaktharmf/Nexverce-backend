@@ -1,5 +1,6 @@
 import Task from "../Models/Task.js";
 import User from "../Models/User.js";
+import { createNotification } from "./NotificationController.js";
 
 // Create a new task (Admin only)
 export const createTask = async (req, res) => {
@@ -32,6 +33,9 @@ export const createTask = async (req, res) => {
       return res.status(404).json({ message: "Assigned user not found" });
     }
 
+    // Get creator details for notification
+    const creator = await User.findById(creatorId);
+
     // Create task
     const task = await Task.create({
       createdBy: creatorId,
@@ -48,6 +52,22 @@ export const createTask = async (req, res) => {
     await task.populate("assignedTo", "firstName lastName role profileImage");
 
     console.log(`✅ Task created: "${title}" assigned to ${assignedUser.firstName} ${assignedUser.lastName}`);
+
+    // Send real-time notification to assigned user
+    const io = req.app.get("io");
+    await createNotification({
+      message: `New task assigned: "${title}"`,
+      type: "info",
+      performedBy: creator,
+      target: {
+        id: task._id.toString(),
+        title: title,
+        model: "Task",
+      },
+      recipientType: "specific",
+      recipientUserId: assignedTo,
+      io,
+    });
 
     res.status(201).json(task);
 
@@ -246,11 +266,7 @@ export const deleteTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    // Only creator can delete
-    if (String(task.createdBy) !== String(userId)) {
-      return res.status(403).json({ message: "Only the task creator can delete it" });
-    }
-
+    // Admin can delete any task (removed creator restriction)
     await Task.findByIdAndDelete(taskId);
 
     console.log(`✅ Task deleted: "${task.title}"`);
