@@ -107,8 +107,9 @@ io.on("connection", (socket) => {
 
   console.log(`🔥 Socket connected: ${socket.id} (User: ${userId})`);
 
-  // ✅ Join personal room
-  socket.join(userId);
+  // ✅ Join personal room with user_ prefix (for force logout, notifications)
+  socket.join(`user_${userId}`);
+  socket.join(userId); // Keep old format for backward compatibility
 
   // ✅ Broadcast presence online
   io.emit("presence:update", {

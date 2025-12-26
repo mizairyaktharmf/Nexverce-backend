@@ -187,6 +187,31 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
 
     /* -----------------------------------------------------
+       CHECK IF USER IS ALREADY LOGGED IN (ACTIVE SESSION)
+       - Both admin and staff can only be logged in on ONE device at a time
+       - If they try to login on another device while already logged in, reject
+    ----------------------------------------------------- */
+    const activeSession = await UserActivity.findOne({
+      userId: user._id,
+      online: true,
+      logoutTime: null,
+    });
+
+    if (activeSession) {
+      return res.status(403).json({
+        message: "You are already logged in on another device. Please logout first before logging in here.",
+        alreadyLoggedIn: true,
+        activeDevice: {
+          browser: activeSession.browser || "Unknown",
+          deviceType: activeSession.deviceType || "Desktop",
+          city: activeSession.city || "Unknown",
+          country: activeSession.country || "Unknown",
+          loginTime: activeSession.loginTime,
+        },
+      });
+    }
+
+    /* -----------------------------------------------------
        CHECK DAILY LOGIN LIMIT (1 login per day) - STAFF ONLY
        ⚠️ Admins are exempt from this restriction
     ----------------------------------------------------- */
@@ -217,18 +242,6 @@ export const login = async (req, res) => {
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
-    );
-
-    /* -----------------------------------------------------
-       1) CLOSE ANY PREVIOUS ACTIVE SESSION
-    ----------------------------------------------------- */
-    await UserActivity.updateMany(
-      { userId: user._id, online: true },
-      {
-        online: false,
-        logoutTime: new Date(),
-        lastSeen: new Date(),
-      }
     );
 
     /* -----------------------------------------------------
