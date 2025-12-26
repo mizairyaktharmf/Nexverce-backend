@@ -383,10 +383,14 @@ export const forceLogout = async (req, res) => {
     // Emit socket event to force logout the user in real-time
     const io = req.app.get("io");
     if (io) {
-      io.emit("account:force-logout", {
+      // Send to specific user only (not broadcast to everyone)
+      io.to(`user_${userId}`).emit("account:force-logout", {
         userId: userId,
         message: "You have been logged out by the administrator",
+        timestamp: new Date().toISOString()
       });
+
+      console.log(`⚡ Socket.IO event sent to user_${userId} for force logout`);
     }
 
     console.log(`✅ Force logged out user ${user.email}, updated ${result.modifiedCount} activity records`);
