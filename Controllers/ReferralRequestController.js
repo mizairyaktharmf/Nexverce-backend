@@ -74,22 +74,27 @@ export const getReferralRequests = async (req, res) => {
     let requests;
 
     if (userRole === "admin") {
-      // Admins see all requests
+      // Admins see all requests from all users
       requests = await ReferralRequest.find()
         .populate("requestedBy", "firstName lastName role profileImage")
         .populate("respondedBy", "firstName lastName role profileImage")
         .sort({ createdAt: -1 });
+
+      console.log(`✅ Admin viewing all referral requests (${requests.length} total)`);
     } else {
-      // Staff see only their own requests
+      // Staff see ONLY their own requests (strict filtering)
       requests = await ReferralRequest.find({ requestedBy: userId })
         .populate("requestedBy", "firstName lastName role profileImage")
         .populate("respondedBy", "firstName lastName role profileImage")
         .sort({ createdAt: -1 });
+
+      console.log(`✅ Staff user viewing their own requests (${requests.length} requests)`);
     }
 
     res.json({
       success: true,
       requests,
+      count: requests.length,
     });
 
   } catch (err) {
@@ -142,11 +147,14 @@ export const respondToReferralRequest = async (req, res) => {
 
     // Send notification to requester
     const io = req.app.get("io");
+
+    const notificationMessage = status === "approved"
+      ? `✅ Your referral link request for "${request.postTitle}" was approved! Check My Requests to view the link.`
+      : `❌ Your referral link request for "${request.postTitle}" was rejected.${responseNotes ? ' Admin note: ' + responseNotes : ''}`;
+
     await createNotification({
-      message: status === "approved"
-        ? `Your referral link request for "${request.postTitle}" was approved!`
-        : `Your referral link request for "${request.postTitle}" was ${status}`,
-      type: status === "approved" ? "info" : "info",
+      message: notificationMessage,
+      type: status === "approved" ? "success" : "info",
       performedBy: admin,
       target: {
         id: request._id.toString(),
