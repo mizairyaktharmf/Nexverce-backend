@@ -9,12 +9,15 @@ const blogSchema = new mongoose.Schema(
     // SHORT PREVIEW TEXT
     excerpt: { type: String, default: "" },
 
-    // CATEGORY & TAGS / SEO KEYWORDS
+    // CATEGORY & TAG
     category: { type: String, required: true },
-    tags: { type: [String], default: [] },
+    tag: { type: String },
 
     // HERO IMAGE
     image: { type: String, default: "" },
+
+    // TELEGRAM LINK (for Telegram-tagged posts)
+    telegramLink: { type: String },
 
     // BLOCK EDITOR CONTENT
     contentBlocks: {

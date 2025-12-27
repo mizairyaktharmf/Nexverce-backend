@@ -16,6 +16,9 @@ const productSchema = new mongoose.Schema(
     referralLink: { type: String },
     image: { type: String },
 
+    // TELEGRAM LINK (for Telegram-tagged posts)
+    telegramLink: { type: String },
+
     // TYPE = product
     type: { type: String, default: "product" },
 
