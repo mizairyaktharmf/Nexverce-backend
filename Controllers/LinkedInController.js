@@ -28,8 +28,8 @@ export const initiateLinkedInAuth = async (req, res) => {
       })
     ).toString("base64");
 
-    // LinkedIn OAuth scopes needed (member + organization posting)
-    const scope = "openid profile email w_member_social w_organization_social";
+    // LinkedIn OAuth scopes needed (member posting only - organization posting disabled until approved)
+    const scope = "openid profile email w_member_social";
 
     // Build authorization URL
     const authUrl =
