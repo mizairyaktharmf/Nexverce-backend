@@ -26,6 +26,7 @@ import linkedinRoutes from "./Routes/LinkedInRoutes.js";
 import universalPostRoutes from "./Routes/UniversalPostRoutes.js";
 import newsletterRoutes from "./Routes/NewsletterRoutes.js";
 import referralRequestRoutes from "./Routes/ReferralRequestRoutes.js";
+import commentRoutes from "./Routes/commentRoutes.js";
 
 // CRON JOBS
 import { startScheduledPosterCron } from "./Jobs/LinkedInScheduledPoster.js";
@@ -286,6 +287,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/linkedin", linkedinRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/referral-requests", referralRequestRoutes);
+app.use("/api/comments", commentRoutes);
 
 /* ============================================================
    DEFAULT HOME ROUTE
