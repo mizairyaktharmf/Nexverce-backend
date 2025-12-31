@@ -45,6 +45,38 @@ const productSchema = new mongoose.Schema(
     views: { type: Number, default: 0 },
     viewedCountries: { type: Array, default: [] },
 
+    // QUIZ MATCHING FIELDS
+    quizCategory: {
+      type: [String],
+      enum: ["marketing", "education", "technology", "lifestyle", "health", "finance"],
+      default: [],
+    },
+    experienceLevel: {
+      type: [String],
+      enum: ["beginner", "intermediate", "advanced"],
+      default: [],
+    },
+    budgetRange: {
+      type: [String],
+      enum: ["free", "budget", "mid", "premium"],
+      default: [],
+    },
+    priorities: {
+      type: [String],
+      enum: ["ease-of-use", "best-quality", "value", "fast-setup", "security", "support", "customization"],
+      default: [],
+    },
+    targetTimeframe: {
+      type: [String],
+      enum: ["urgent", "soon", "planning"],
+      default: [],
+    },
+    supportLevel: {
+      type: [String],
+      enum: ["critical", "nice-to-have", "not-important"],
+      default: [],
+    },
+
     // USER WHO CREATED THE POST
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
