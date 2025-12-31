@@ -76,6 +76,16 @@ const productSchema = new mongoose.Schema(
       enum: ["critical", "nice-to-have", "not-important"],
       default: [],
     },
+    userType: {
+      type: [String],
+      enum: ["individual", "small-business", "enterprise"],
+      default: [],
+    },
+    integrationNeeds: {
+      type: [String],
+      enum: ["essential", "preferred", "not-needed"],
+      default: [],
+    },
 
     // USER WHO CREATED THE POST
     createdBy: {

@@ -7,6 +7,7 @@ import {
   deletePost,
   changeStatus,
   schedulePost,
+  getQuizMatches,
 } from "../Controllers/ProductController.js";
 
 import { verifyToken } from "../Middleware/AuthMiddleware.js";
@@ -21,6 +22,7 @@ const router = express.Router();
    PUBLIC ROUTES (Client website)
 ====================================================== */
 router.get("/", getAllPosts);          // All posts
+router.post("/quiz-match", getQuizMatches); // Quiz matching
 router.get("/:id", getPostById);       // Single post
 
 /* ======================================================
