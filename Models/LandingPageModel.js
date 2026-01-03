@@ -280,6 +280,32 @@ const landingPageSchema = new mongoose.Schema(
         type: Date,
       },
     },
+
+    // Career/Job Details (for Career category pages)
+    careerDetails: {
+      salaryAmount: {
+        type: Number,
+      },
+      salaryCurrency: {
+        type: String,
+        enum: ["USD", "AED", "LKR", "EUR", "GBP", "INR", "AUD", "CAD"],
+        default: "USD",
+      },
+      salaryType: {
+        type: String,
+        enum: ["yearly", "monthly", "hourly", "range", "competitive"],
+        default: "yearly",
+      },
+      jobLocation: {
+        type: String,
+        trim: true,
+      },
+      jobType: {
+        type: String,
+        enum: ["Full-time", "Part-time", "Contract", "Freelance", "Internship"],
+        default: "Full-time",
+      },
+    },
   },
   {
     timestamps: true,
